@@ -1,0 +1,29 @@
+fastapi==0.104.1
+strawberry-graphql[fastapi]==0.216.0
+uvicorn[standard]==0.24.0
+sqlalchemy==2.0.23
+alembic==1.12.1
+psycopg2-binary==2.9.9
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# AI Integration
+httpx==0.25.2
+openai==1.3.6
+
+# Diagram Generation
+matplotlib==3.8.2
+pillow==10.1.0
+svglib==1.5.1
+reportlab==4.0.7
+
+# Crochet Pattern Processing
+regex==2023.10.3
+beautifulsoup4==4.12.2
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1

@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=crooked_finger_db
+      - POSTGRES_USER=crochet_user
+      - POSTGRES_PASSWORD=crochet_secure_password_2024
+    volumes:
+      - crooked_finger_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crochet_user -d crooked_finger_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - crooked-finger-network
+    ports:
+      - "5433:5432"  # Different external port from CryptAssist
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"  # Different port from CryptAssist (8000)
+    environment:
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ADMIN_SECRET=${ADMIN_SECRET:-change-this-in-production}
+      - DATABASE_URL=postgresql://crochet_user:crochet_secure_password_2024@postgres:5432/crooked_finger_db
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DEBUG=${DEBUG:-false}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/crooked-finger/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - crooked-finger-network
+
+volumes:
+  crooked_finger_postgres_data:
+    driver: local
+
+networks:
+  crooked-finger-network:
+    name: crooked-finger-network
