@@ -1,11 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+// import { useMutation } from '@apollo/client/react/index.js';
 import { Navigation } from '../components/Navigation';
 import { HomePage } from '../components/HomePage';
 import { ChatInterface } from '../components/ChatInterface';
 import { ProjectsPage } from '../components/ProjectsPage';
 import { PatternLibrary } from '../components/PatternLibrary';
+import { CHAT_WITH_ASSISTANT } from '../lib/graphql/mutations';
+import { ChatWithAssistantVariables, ChatWithAssistantResponse } from '../types/graphql';
 
 interface Project {
   id: string;
@@ -26,10 +29,17 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   isPattern?: boolean;
+  diagramSvg?: string;
+  diagramPng?: string;
 }
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('home');
+  const [chatLoading, setChatLoading] = useState(false);
+  // const [chatWithAssistant, { loading: chatLoading }] = useMutation<
+  //   ChatWithAssistantResponse,
+  //   ChatWithAssistantVariables
+  // >(CHAT_WITH_ASSISTANT);
 
   // Mock data for demonstration
   const [projects] = useState<Project[]>([
@@ -73,7 +83,7 @@ export default function Home() {
 
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
 
-  const handleSendMessage = (message: string) => {
+  const handleSendMessage = async (message: string) => {
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
@@ -83,9 +93,56 @@ export default function Home() {
     };
 
     setChatHistory(prev => [...prev, userMessage]);
+    setChatLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Use fetch() directly for GraphQL call
+      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+      const response = await fetch(graphqlUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation ChatWithAssistantEnhanced($message: String!, $context: String) {
+              chatWithAssistantEnhanced(message: $message, context: $context) {
+                message
+                diagramSvg
+                diagramPng
+                hasPattern
+              }
+            }
+          `,
+          variables: {
+            message,
+            context: 'crochet_pattern_assistant',
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.data?.chatWithAssistantEnhanced) {
+        const response = result.data.chatWithAssistantEnhanced;
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: response.message,
+          timestamp: new Date(),
+          isPattern: response.hasPattern,
+          diagramSvg: response.diagramSvg,
+          diagramPng: response.diagramPng,
+        };
+        setChatHistory(prev => [...prev, assistantMessage]);
+      } else if (result.errors) {
+        console.error('GraphQL errors:', result.errors);
+        throw new Error('GraphQL mutation not available');
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+
+      // Fallback to mock response if backend mutation isn't available yet
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
@@ -94,7 +151,9 @@ export default function Home() {
         isPattern: true,
       };
       setChatHistory(prev => [...prev, assistantMessage]);
-    }, 1000);
+    } finally {
+      setChatLoading(false);
+    }
   };
 
   const generateAIResponse = (userMessage: string): string => {
@@ -132,6 +191,7 @@ export default function Home() {
           <ChatInterface
             chatHistory={chatHistory}
             onSendMessage={handleSendMessage}
+            loading={chatLoading}
           />
         );
       case 'projects':

@@ -24,7 +24,7 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
             <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center">
               <span className="text-primary-foreground font-medium">🧶</span>
             </div>
-            <h1 className="text-xl font-medium text-sidebar-foreground">Crochet Companion</h1>
+            <h1 className="text-xl font-medium text-sidebar-foreground">Crooked Finger</h1>
           </div>
           <ThemeToggle />
         </div>

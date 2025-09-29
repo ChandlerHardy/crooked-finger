@@ -11,14 +11,17 @@ interface ChatMessage {
   content: string;
   timestamp: Date;
   isPattern?: boolean;
+  diagramSvg?: string;
+  diagramPng?: string;
 }
 
 interface ChatInterfaceProps {
   chatHistory: ChatMessage[];
   onSendMessage: (message: string) => void;
+  loading?: boolean;
 }
 
-export function ChatInterface({ chatHistory, onSendMessage }: ChatInterfaceProps) {
+export function ChatInterface({ chatHistory, onSendMessage, loading = false }: ChatInterfaceProps) {
   const [message, setMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,21 +40,21 @@ export function ChatInterface({ chatHistory, onSendMessage }: ChatInterfaceProps
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full max-h-screen">
       <div className="border-b border-border p-6 bg-gradient-to-r from-primary/15 to-primary/5">
         <h2 className="text-xl font-medium flex items-center gap-3 text-primary-foreground">
           <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
             <Sparkles className="h-4 w-4 text-primary-foreground" />
           </div>
-          AI Pattern Assistant
+          GRANNi
         </h2>
         <p className="text-sm text-primary-foreground/80 mt-2 leading-relaxed">
           Transform complex crochet notation into easy-to-follow, cozy instructions
         </p>
       </div>
 
-      <ScrollArea className="flex-1 p-6" ref={scrollAreaRef}>
-        <div className="space-y-4 max-w-4xl">
+      <ScrollArea className="flex-1 p-6 overflow-auto" ref={scrollAreaRef}>
+        <div className="space-y-4 max-w-4xl min-h-full">
           {chatHistory.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -121,11 +124,40 @@ export function ChatInterface({ chatHistory, onSendMessage }: ChatInterfaceProps
                     </div>
                     <div className="prose prose-sm">
                       <p className="whitespace-pre-wrap leading-relaxed text-card-foreground">{msg.content}</p>
+                      {msg.diagramSvg && (
+                        <div className="mt-6 p-4 bg-white rounded-lg border border-border/30 shadow-sm">
+                          <h4 className="text-sm font-medium text-gray-700 mb-3">Pattern Diagram</h4>
+                          <div
+                            className="diagram-container flex justify-center items-center"
+                            dangerouslySetInnerHTML={{ __html: msg.diagramSvg }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </Card>
             ))
+          )}
+          {loading && (
+            <Card className="mr-12 bg-card/90 p-5 shadow-lg border-border/30 rounded-2xl backdrop-blur-sm">
+              <div className="flex items-start gap-4">
+                <div className="w-9 h-9 rounded-2xl flex items-center justify-center bg-muted text-muted-foreground">
+                  🤖
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="font-medium text-card-foreground">AI Assistant</span>
+                    <span className="text-xs text-muted-foreground">thinking...</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              </div>
+            </Card>
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -139,7 +171,7 @@ export function ChatInterface({ chatHistory, onSendMessage }: ChatInterfaceProps
             placeholder="Paste your crochet pattern or ask a question..."
             className="flex-1 rounded-2xl border-primary/30 focus:border-primary/50 bg-input-background/80 text-foreground placeholder:text-muted-foreground"
           />
-          <Button type="submit" disabled={!message.trim()} className="rounded-2xl px-6">
+          <Button type="submit" disabled={!message.trim() || loading} className="rounded-2xl px-6">
             <Send className="h-4 w-4" />
           </Button>
         </form>

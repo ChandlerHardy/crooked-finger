@@ -5,13 +5,20 @@ from strawberry.types import Info
 from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
-    User, AuthResponse, CrochetProject,
+    User, AuthResponse, CrochetProject, ChatResponse,
     RegisterInput, LoginInput, CreateProjectInput
 )
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
 )
 from app.core.config import settings
+from app.services.ai_service import ai_service
+from app.services.pattern_service import pattern_service
+from app.services.granny_square_service import granny_square_service
+from app.services.flowing_granny_service import flowing_granny_service
+from app.services.matplotlib_crochet_service import matplotlib_crochet_service
+from app.services.rag_service import rag_service
+import re
 
 @strawberry.type
 class Mutation:
@@ -146,3 +153,207 @@ class Mutation:
             )
         finally:
             db.close()
+
+    @strawberry.field
+    async def chat_with_assistant(
+        self,
+        message: str,
+        context: Optional[str] = None
+    ) -> str:
+        """Chat with AI assistant about crochet patterns and techniques"""
+        try:
+            # Check if user is requesting a diagram
+            if requests_diagram(message):
+                # Generate diagram and include it in the response
+                return await _chat_with_diagram_generation(message, context)
+
+            # Regular chat without diagram
+            response = await ai_service.chat_about_pattern(
+                message=message,
+                project_context=context or "",
+                chat_history=""
+            )
+            return response
+        except Exception as e:
+            return f"I'm having trouble responding right now. Please try again in a moment. (Error: {str(e)})"
+
+    @strawberry.field
+    async def chat_with_assistant_enhanced(
+        self,
+        message: str,
+        context: Optional[str] = None
+    ) -> ChatResponse:
+        """Enhanced chat with AI assistant that can generate pattern diagrams"""
+        try:
+            # Analyze user request for pattern type and diagram needs
+            user_analysis = rag_service.analyze_user_request(message)
+
+            # Use the AI service to get response
+            ai_response = await ai_service.chat_about_pattern(
+                message=message,
+                project_context=context or "",
+                chat_history=""
+            )
+
+            # Check if the message or response contains pattern information
+            has_pattern = contains_pattern_info(message + " " + ai_response)
+
+            diagram_svg = None
+            diagram_png = None
+
+            # Check if user is requesting a diagram AND we have pattern content
+            if user_analysis['requests_diagram'] and has_pattern:
+                try:
+                    # Use specialized matplotlib-based generator for all patterns
+                    if user_analysis['is_granny_square']:
+                        # Generate professional granny square chart with matplotlib
+                        pattern_text = extract_pattern_text(message, ai_response) or message
+                        diagram_svg = matplotlib_crochet_service.generate_granny_square_chart(pattern_text)
+                    else:
+                        # Use matplotlib for general patterns too
+                        pattern_text = extract_pattern_text(message, ai_response)
+                        if pattern_text:
+                            # Parse and generate diagrams with matplotlib
+                            pattern_data = pattern_service.parse_pattern_structure(pattern_text)
+
+                            if pattern_data.get('rounds') and len(pattern_data['rounds']) > 0:
+                                diagram_svg = matplotlib_crochet_service.generate_pattern_chart(pattern_data)
+                except Exception as diagram_error:
+                    # If diagram generation fails, just continue without it
+                    print(f"Diagram generation failed: {diagram_error}")
+
+            return ChatResponse(
+                message=ai_response,
+                diagram_svg=diagram_svg,
+                diagram_png=diagram_png,
+                has_pattern=has_pattern
+            )
+
+        except Exception as e:
+            # Return a friendly error message for users
+            return ChatResponse(
+                message=f"I'm having trouble responding right now. Please try again in a moment. (Error: {str(e)})",
+                has_pattern=False
+            )
+
+async def _chat_with_diagram_generation(message: str, context: Optional[str]) -> str:
+    """Handle chat requests that include diagram generation"""
+    try:
+        # Get AI response first
+        ai_response = await ai_service.chat_about_pattern(
+            message=message,
+            project_context=context or "",
+            chat_history=""
+        )
+
+        # Try to extract pattern from message or AI response for diagram
+        pattern_text = extract_pattern_text(message, ai_response)
+
+        if pattern_text:
+            # Generate diagram
+            pattern_data = pattern_service.parse_pattern_structure(pattern_text)
+
+            if pattern_data.get('rounds') and len(pattern_data['rounds']) > 0:
+                # Generate SVG diagram
+                diagram_svg = pattern_service.generate_stitch_diagram_svg(pattern_data)
+
+                # Append diagram info to response
+                diagram_info = f"\n\n📊 **Pattern Diagram Generated:**\n"
+                diagram_info += f"- Rounds: {pattern_data['total_rounds']}\n"
+                diagram_info += f"- Pattern Type: {pattern_data['pattern_type']}\n"
+                diagram_info += f"- Estimated Size: {pattern_data['estimated_size']}\n"
+                diagram_info += f"- SVG diagram has been created with stitch symbols and legend\n"
+
+                return ai_response + diagram_info
+            else:
+                return ai_response + "\n\n⚠️ I couldn't create a diagram from this pattern. Please provide a clearer pattern with round/row structure."
+        else:
+            # If no pattern found, offer to create an example
+            example_response = f"\n\n📊 **I can create diagrams when you provide a crochet pattern!**\n\n"
+            example_response += "Here's what I can visualize:\n"
+            example_response += "- Round-based patterns (like amigurumi or granny squares)\n"
+            example_response += "- Row-based patterns (like scarves or blankets)\n"
+            example_response += "- Individual stitch techniques\n\n"
+            example_response += "Just share a pattern like: 'Round 1: ch 3, 11 dc in magic ring, sl st to join' and I'll create a visual diagram for you!"
+
+            return ai_response + example_response
+
+    except Exception as e:
+        return f"I had trouble generating the diagram: {str(e)}"
+
+
+def requests_diagram(message: str) -> bool:
+    """Check if user is explicitly requesting a diagram"""
+    # More comprehensive diagram request patterns
+    diagram_keywords = [
+        # Direct diagram requests
+        'diagram', 'visual', 'chart', 'drawing', 'picture',
+        # Action words + diagram words
+        'show', 'create', 'make', 'generate', 'draw', 'visualize',
+        # Combined phrases
+        'show me', 'can you draw', 'make a', 'create a'
+    ]
+
+    message_lower = message.lower()
+
+    # Check for explicit diagram-related words
+    has_diagram_word = any(word in message_lower for word in ['diagram', 'visual', 'chart', 'drawing', 'picture'])
+    has_action_word = any(word in message_lower for word in ['show', 'create', 'make', 'generate', 'draw', 'visualize'])
+
+    # If both are present, it's likely a diagram request
+    if has_diagram_word and has_action_word:
+        return True
+
+    # Check for specific phrases
+    specific_phrases = [
+        'can you draw',
+        'show me',
+        'make a diagram',
+        'create a visual',
+        'visualize this',
+        'draw a diagram',
+        'show diagram',
+        'create diagram'
+    ]
+
+    return any(phrase in message_lower for phrase in specific_phrases)
+
+
+def contains_pattern_info(text: str) -> bool:
+    """Check if text contains crochet pattern information"""
+    pattern_indicators = [
+        r'\b(?:round|rnd|row)\s*\d+',
+        r'\b(?:sc|dc|hdc|tc|sl st|ch)\b',
+        r'magic ring|magic circle',
+        r'\d+\s*(?:sc|dc|hdc|tc)',
+        r'foundation(?:\s+chain)?',
+        r'(?:increase|decrease|inc|dec)',
+        r'stitch(?:es)?\s+into',
+        r'chain\s+\d+',
+        r'pattern:',
+        r'instructions:'
+    ]
+
+    text_lower = text.lower()
+    return any(re.search(pattern, text_lower) for pattern in pattern_indicators)
+
+
+def extract_pattern_text(message: str, ai_response: str) -> Optional[str]:
+    """Extract pattern text from message or AI response"""
+    combined_text = message + "\n" + ai_response
+
+    # Look for explicit pattern sections
+    pattern_match = re.search(r'(?:pattern:|instructions?:)(.*?)(?:\n\n|\Z)', combined_text, re.DOTALL | re.IGNORECASE)
+    if pattern_match:
+        return pattern_match.group(1).strip()
+
+    # Look for round/row based patterns
+    round_matches = re.findall(r'(?:round|rnd|row)\s*\d+:.*?(?=(?:round|rnd|row)\s*\d+|$)', combined_text, re.IGNORECASE | re.DOTALL)
+    if round_matches:
+        return "\n".join(round_matches)
+
+    # If message looks like it contains a pattern, return the whole message
+    if contains_pattern_info(message) and len(message.split()) > 5:
+        return message
+
+    return None

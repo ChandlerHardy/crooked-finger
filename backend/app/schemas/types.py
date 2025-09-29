@@ -98,3 +98,10 @@ class TranslationResponse:
     original_pattern: str
     translated_instructions: str
     analysis: PatternAnalysis
+
+@strawberry.type
+class ChatResponse:
+    message: str
+    diagram_svg: Optional[str] = None
+    diagram_png: Optional[str] = None
+    has_pattern: bool = False

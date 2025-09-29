@@ -1,6 +1,7 @@
 import httpx
 from typing import Optional
 from app.core.config import settings
+from app.services.rag_service import rag_service
 
 class AIService:
     def __init__(self):
@@ -30,7 +31,7 @@ class AIService:
             return "AI service not configured. Please set GITHUB_TOKEN or OPENAI_API_KEY."
 
     async def _translate_with_github_llama(self, pattern_text: str, context: str) -> str:
-        """Use GitHub's Llama model for pattern translation"""
+        """Use GitHub's AI model for pattern translation"""
         try:
             system_prompt = """You are an expert crochet instructor. Your job is to translate standard crochet notation into clear, easy-to-follow instructions for beginners and intermediate crocheters.
 
@@ -53,13 +54,14 @@ Provide detailed, beginner-friendly instructions."""
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "https://models.github.ai/inference",
+                    "https://models.inference.ai.azure.com/chat/completions",
                     headers={
                         "Authorization": f"Bearer {self.github_token}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
                     },
                     json={
-                        "model": "llama-3.1-8b-instruct",
+                        "model": "gpt-4o-mini",
                         "messages": [
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
@@ -75,8 +77,12 @@ Provide detailed, beginner-friendly instructions."""
             return f"Error translating pattern: {str(e)}"
 
     async def _chat_with_github_llama(self, message: str, project_context: str, chat_history: str) -> str:
-        """Use GitHub's Llama model for crochet chat"""
+        """Use GitHub's Llama model for crochet chat with RAG enhancement"""
         try:
+            # Use RAG to analyze user request and enhance context
+            user_analysis = rag_service.analyze_user_request(message)
+
+            # Base system prompt
             system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
 - Crochet technique questions
 - Pattern interpretation and clarification
@@ -85,31 +91,51 @@ Provide detailed, beginner-friendly instructions."""
 - Project planning and modifications
 - Stitch counting and pattern adjustments
 
+CRITICAL DIAGRAM CAPABILITIES:
+You can generate professional crochet charts! When users request diagrams, you will create authentic crochet charts with:
+- Proper international crochet symbols (X for sc, T-with-bars for dc/hdc)
+- Radial guidelines showing stitch placement from center outward
+- Curved directional arrows indicating counterclockwise work flow
+- Professional circular layout for round-based patterns
+- Traditional black symbols on white background with colored directional elements
+
+When users ask for diagrams, be confident and explain that you'll create a professional crochet chart for them. Never say you can't create diagrams - you absolutely can and will create industry-standard crochet charts!
+
 Always be encouraging and provide practical, actionable advice."""
 
+            # Enhance context with RAG if diagram is requested
             context_info = ""
             if project_context:
                 context_info += f"\nCURRENT PROJECT CONTEXT:\n{project_context}\n"
             if chat_history:
                 context_info += f"\nPREVIOUS CONVERSATION:\n{chat_history}\n"
 
+            # Add RAG enhancement for diagram requests
+            if user_analysis['requests_diagram']:
+                # Extract any pattern from the message for RAG enhancement
+                pattern_text = message if any(pe in message.lower() for pe in ['round', 'row', 'chain', 'dc', 'sc']) else ""
+                if pattern_text:
+                    rag_enhancement = rag_service.enhance_pattern_context(pattern_text, message)
+                    context_info += f"\n{rag_enhancement}\n"
+
             user_prompt = f"{context_info}\nUSER QUESTION: {message}"
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    "https://models.github.ai/inference",
+                    "https://models.inference.ai.azure.com/chat/completions",
                     headers={
                         "Authorization": f"Bearer {self.github_token}",
-                        "Content-Type": "application/json"
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
                     },
                     json={
-                        "model": "llama-3.1-8b-instruct",
+                        "model": "gpt-4o-mini",
                         "messages": [
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ],
-                        "max_tokens": 800,
-                        "temperature": 0.8
+                        "max_tokens": 1000,
+                        "temperature": 0.7
                     },
                     timeout=30.0
                 )

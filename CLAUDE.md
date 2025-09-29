@@ -52,7 +52,11 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 ## Core Features
 1. **Pattern Translation**: Convert crochet notation to readable instructions
 2. **AI Assistant**: Chat interface for pattern clarification
-3. **Diagram Generation**: Visual crochet diagrams using Python libraries
+3. **Professional Diagram Generation**: ✅ **ENHANCED** - Professional crochet charts with matplotlib
+   - Traditional granny square charts with proper corner construction
+   - Authentic crochet symbols (double crochet with crossbars, chain ovals)
+   - Square-framework based granny squares matching published patterns
+   - Intelligent pattern detection for diagram requests
 4. **Project Management**: Save and track crochet projects
 5. **Chat History**: Store conversations for reference
 
@@ -77,8 +81,12 @@ backend/
 │   │   ├── queries.py         # GraphQL queries
 │   │   └── mutations.py       # GraphQL mutations
 │   ├── services/
-│   │   ├── ai_service.py      # AI integration (Llama/Claude)
-│   │   └── pattern_service.py # Pattern parsing & diagram generation
+│   │   ├── ai_service.py                    # AI integration (Llama/Claude)
+│   │   ├── pattern_service.py               # Pattern parsing & diagram generation
+│   │   ├── matplotlib_crochet_service.py    # ✅ ENHANCED Professional chart generation
+│   │   ├── granny_square_service.py         # Specialized granny square charts (SVG)
+│   │   ├── flowing_granny_service.py        # Flowing granny square variants
+│   │   └── rag_service.py                   # Crochet chart knowledge enhancement
 │   ├── utils/
 │   │   └── auth.py            # JWT authentication
 │   └── requirements.txt
@@ -112,10 +120,15 @@ cd crooked-finger && docker-compose -f docker-compose.backend.yml restart backen
 # Deploy backend updates
 ./deploy-backend-to-oci.sh 150.136.38.166
 
-# Test GraphQL hello query
+# Test GraphQL chatWithAssistant mutation
 curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
   -H "Content-Type: application/json" \
-  -d '{"query":"{ hello }"}'
+  -d '{"query":"mutation { chatWithAssistant(message: \"What does sc2tog mean?\") }"}'
+
+# Test enhanced chat with diagram generation
+curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { chatWithAssistantEnhanced(message: \"Can you show me a granny square diagram?\") { message diagramSvg hasPattern } }"}'
 
 # Test health check
 curl http://150.136.38.166:8001/crooked-finger/health
@@ -123,6 +136,82 @@ curl http://150.136.38.166:8001/crooked-finger/health
 # View backend logs
 cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
 ```
+
+## 🚨 Common Issues & Solutions
+
+### CORS Issues (Frontend can't connect to backend)
+**Symptoms**: Browser console shows "blocked by CORS policy" or "No 'Access-Control-Allow-Origin' header"
+
+**Solution**: Update CORS_ORIGINS in `.env` file on server:
+```bash
+# SSH to server and edit .env
+ssh ubuntu@150.136.38.166 -i /Users/chandlerhardy/.ssh/ampere.key
+cd crooked-finger
+# Add your development URL to CORS_ORIGINS:
+CORS_ORIGINS=https://crooked-finger-app.vercel.app,https://backend.chandlerhardy.com,http://localhost:3000,http://localhost:3001
+
+# Restart to apply changes
+docker-compose -f docker-compose.backend.yml down && docker-compose -f docker-compose.backend.yml up -d
+```
+
+### AI Service Not Working
+**Symptoms**: "AI service not configured" or 404 errors from GitHub API
+
+**Check**:
+1. GITHUB_TOKEN is set in `.env`
+2. API endpoint is correct: `https://models.inference.ai.azure.com/chat/completions`
+3. Test directly: `docker-compose exec backend env | grep GITHUB_TOKEN`
+
+## 🎨 Enhanced Diagram Generation System (September 2024)
+
+### Professional Crochet Chart Features
+**Matplotlib-Based Generation**: Advanced chart creation using Python matplotlib with professional crochet symbols
+
+**Key Services**:
+- `matplotlib_crochet_service.py` - **Primary service** for traditional granny square charts
+- `granny_square_service.py` - Alternative SVG-based granny charts
+- `flowing_granny_service.py` - Flowing/connected granny square variants
+- `rag_service.py` - Crochet chart knowledge enhancement
+
+### Traditional Granny Square Charts
+**Authentic Symbol Set**:
+- **Double Crochet (dc)**: Proper T-shaped symbols with crossbars (one at end, one at middle)
+- **Chain (ch)**: Traditional oval symbols for chain spaces
+- **Corner Chains (ch-2)**: Two angled chain ovals forming proper right angles
+
+**Square-Framework Construction**:
+- **Round 1**: Magic ring with 12 dc stitches in center
+- **Round 2**: Corner groups at cardinal positions with ch-2 corners
+  - North (0, 1.4), East (1.4, 0), South (0, -1.4), West (-1.4, 0)
+  - Fixed corner positioning to form proper right angles at all 4 corners
+- **Round 3**: Expanded corner groups with side connections
+
+**Professional Features**:
+- Guideline squares for visual structure reference
+- Traditional crochet chart color scheme (black symbols, gray guidelines)
+- Proper stitch orientation pointing toward center
+- Authentic corner construction matching published patterns
+
+### Intelligent Pattern Detection
+**Enhanced Chat Integration**:
+- Detects diagram requests in user messages ("show me", "diagram", "visual")
+- Identifies granny square patterns vs. general crochet patterns
+- Routes to appropriate generation service based on pattern type
+- Only generates diagrams when explicitly requested (optimizes token usage)
+
+**Smart Routing**:
+```python
+# Pattern detection examples
+"Can you show me a granny square diagram?" → Traditional granny square chart
+"Create a visual for this pattern: Round 1: ch 4..." → General pattern chart
+"What is a granny square?" → Text response only (no diagram)
+```
+
+### Recent Improvements (Latest Session)
+1. **Fixed Round 2 Corner Positioning**: All 4 corners now have properly positioned ch-2 chains
+2. **Enhanced Corner Angles**: Ch-2 corners form authentic right angles at square corners
+3. **Improved Symbol Quality**: Double crochet symbols with proper crossbar placement
+4. **Pattern Detection Fix**: Correctly routes general granny square requests to traditional chart generation
 
 ## 🤖 AI Integration Options
 **Option 1: GitHub Llama (Existing Setup)**
@@ -156,6 +245,11 @@ cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
 6. ✅ Deploy to OCI with port 8001
 7. ✅ Configure OCI Security Groups for port access
 8. ✅ **Frontend Development Complete**
+9. ✅ **Professional Crochet Chart Generation ENHANCED** (September 2024)
+   - Matplotlib-based granny square charts with traditional symbols
+   - Fixed Round 2 corner construction with proper ch-2 positioning
+   - Authentic double crochet symbols with crossbars
+   - Square-framework construction matching published patterns
 
 ## 🚀 Backend Successfully Deployed!
 - **Status**: ✅ Live and operational

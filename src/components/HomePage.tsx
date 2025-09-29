@@ -161,7 +161,7 @@ export function HomePage({ recentProjects, recentChats, onNavigate }: HomePagePr
                   <div className="w-8 h-8 bg-primary/20 rounded-xl flex items-center justify-center">
                     <MessageCircle className="h-4 w-4 text-primary-foreground" />
                   </div>
-                  Recent AI Chats
+                  Recent GRANNi Chats
                 </CardTitle>
                 <Button variant="ghost" size="sm" onClick={() => onNavigate('chat')} className="text-primary hover:text-primary hover:bg-primary/20 rounded-xl">
                   View all
@@ -176,7 +176,7 @@ export function HomePage({ recentProjects, recentChats, onNavigate }: HomePagePr
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">No conversations yet</p>
                   <Button size="sm" onClick={() => onNavigate('chat')}>
-                    Start chatting with AI
+                    Start chatting with GRANNi
                   </Button>
                 </div>
               ) : (
