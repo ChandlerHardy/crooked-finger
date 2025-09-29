@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, date
 
 Base = declarative_base()
 
@@ -71,3 +71,13 @@ class ProjectDiagram(Base):
 
     # Relationships
     project = relationship("CrochetProject", back_populates="diagrams")
+
+class AIModelUsage(Base):
+    __tablename__ = "ai_model_usage"
+
+    id = Column(Integer, primary_key=True, index=True)
+    model_name = Column(String, index=True)  # gemini-2.5-pro, gemini-2.5-flash, etc.
+    request_count = Column(Integer, default=0)
+    date = Column(Date, default=date.today, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

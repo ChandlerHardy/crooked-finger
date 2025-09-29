@@ -105,3 +105,19 @@ class ChatResponse:
     diagram_svg: Optional[str] = None
     diagram_png: Optional[str] = None
     has_pattern: bool = False
+
+@strawberry.type
+class ModelUsageStats:
+    model_name: str
+    current_usage: int
+    daily_limit: int
+    remaining: int
+    percentage_used: float
+    priority: int
+    use_case: str
+
+@strawberry.type
+class AIUsageDashboard:
+    total_requests_today: int
+    total_remaining: int
+    models: List[ModelUsageStats]

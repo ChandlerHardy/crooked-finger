@@ -3,7 +3,8 @@ from typing import List, Optional
 from strawberry.types import Info
 from app.database.connection import get_db
 from app.database import models
-from app.schemas.types import User, CrochetProject, ChatMessage, ProjectDiagram
+from app.schemas.types import User, CrochetProject, ChatMessage, ProjectDiagram, AIUsageDashboard, ModelUsageStats
+from app.services.ai_service import ai_service
 
 @strawberry.type
 class Query:
@@ -86,3 +87,32 @@ class Query:
             )
         finally:
             db.close()
+
+    @strawberry.field
+    def ai_usage_dashboard(self) -> AIUsageDashboard:
+        """Get AI model usage statistics dashboard"""
+        stats = ai_service.get_usage_stats()
+
+        # Convert to GraphQL types
+        model_stats = []
+        total_requests = 0
+        total_remaining = 0
+
+        for model_name, data in stats.items():
+            model_stats.append(ModelUsageStats(
+                model_name=model_name,
+                current_usage=data["current_usage"],
+                daily_limit=data["daily_limit"],
+                remaining=data["remaining"],
+                percentage_used=data["percentage_used"],
+                priority=data["priority"],
+                use_case=data["use_case"]
+            ))
+            total_requests += data["current_usage"]
+            total_remaining += data["remaining"]
+
+        return AIUsageDashboard(
+            total_requests_today=total_requests,
+            total_remaining=total_remaining,
+            models=model_stats
+        )
