@@ -7,6 +7,7 @@ import { HomePage } from '../components/HomePage';
 import { ChatInterface } from '../components/ChatInterface';
 import { ProjectsPage } from '../components/ProjectsPage';
 import { PatternLibrary } from '../components/PatternLibrary';
+import AIUsageDashboardComponent from '../components/AIUsageDashboard';
 import { CHAT_WITH_ASSISTANT } from '../lib/graphql/mutations';
 import { ChatWithAssistantVariables, ChatWithAssistantResponse } from '../types/graphql';
 
@@ -204,6 +205,12 @@ export default function Home() {
         );
       case 'patterns':
         return <PatternLibrary />;
+      case 'usage':
+        return (
+          <div className="h-full overflow-auto p-6">
+            <AIUsageDashboardComponent />
+          </div>
+        );
       case 'settings':
         return (
           <div className="h-full flex items-center justify-center">

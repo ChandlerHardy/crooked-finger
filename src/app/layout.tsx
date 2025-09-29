@@ -35,7 +35,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <ApolloWrapper>
+              {children}
+            </ApolloWrapper>
           </ThemeProvider>
       </body>
     </html>

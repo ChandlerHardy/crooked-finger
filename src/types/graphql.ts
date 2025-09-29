@@ -64,3 +64,24 @@ export interface CreateProjectResponse {
 export interface UpdateProjectResponse {
   updateProject: Project;
 }
+
+// AI Usage Dashboard types
+export interface ModelUsageStats {
+  modelName: string;
+  currentUsage: number;
+  dailyLimit: number;
+  remaining: number;
+  percentageUsed: number;
+  priority: number;
+  useCase: string;
+}
+
+export interface AIUsageDashboard {
+  totalRequestsToday: number;
+  totalRemaining: number;
+  models: ModelUsageStats[];
+}
+
+export interface GetAIUsageDashboardResponse {
+  aiUsageDashboard: AIUsageDashboard;
+}

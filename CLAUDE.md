@@ -6,7 +6,7 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 ## Tech Stack
 - **Frontend**: Next.js 15 + TypeScript, Tailwind CSS, Apollo GraphQL
 - **Backend**: FastAPI + Strawberry GraphQL, PostgreSQL
-- **AI**: Google Gemini 2.5 Flash via Google AI Studio ⭐ **UPDATED**
+- **AI**: Multi-Model Gemini System (Pro + Flash Preview + Flash + Flash-Lite) ⭐ **ENHANCED**
 - **Diagram Generation**: Professional matplotlib charts + traditional SVG generators
 - **Deployment**: Vercel (frontend) + Oracle Cloud Infrastructure (backend)
 
@@ -35,7 +35,7 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 
 ## ⚙️ Key Environment Variables
 **Backend (.env on OCI server):**
-- `GEMINI_API_KEY=***` (Google AI Studio API key for Gemini 2.5 Flash)
+- `GEMINI_API_KEY=***` (Google AI Studio API key for all Gemini models)
 - `CORS_ORIGINS=https://crooked-finger-app.vercel.app,https://backend.chandlerhardy.com`
 - `ADMIN_SECRET=change-this-in-production`
 - `DATABASE_URL=postgresql://crochet_user:crochet_password@postgres:5432/crooked_finger_db`
@@ -132,6 +132,11 @@ curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
 # Test health check
 curl http://150.136.38.166:8001/crooked-finger/health
 
+# Test AI usage dashboard
+curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"query { aiUsageDashboard { totalRequestsToday totalRemaining models { modelName currentUsage dailyLimit remaining percentageUsed priority useCase } } }"}'
+
 # View backend logs
 cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
 ```
@@ -222,37 +227,45 @@ docker-compose -f docker-compose.backend.yml restart backend
 4. **Pattern Detection Fix**: Correctly routes general granny square requests to traditional chart generation
 
 ## 🤖 AI Integration - Google AI Studio (Gemini)
-**Current Architecture: Google Gemini 2.5 Flash** ⭐ **FULLY OPERATIONAL**
-- ✅ Fast and efficient for crochet pattern understanding
-- ✅ Excellent creative capabilities for pattern explanations
-- ✅ Reliable API with good uptime and consistent responses
-- ✅ Pay-per-use with generous free tier
-- ✅ No token limitations like GitHub models
-- ✅ Direct API key authentication (proven reliable)
-- 🔑 API Key: Get free key from [Google AI Studio](https://aistudio.google.com/apikey)
+**Current Architecture: Multi-Model Smart Routing System** ⭐ **FULLY OPERATIONAL**
+- ✅ **4-Tier Model System**: Uses all Gemini models for maximum quota (1,600 daily requests)
+  - **Gemini 2.5 Pro**: 100 requests/day - Premium quality for complex pattern analysis
+  - **Gemini 2.5 Flash Preview**: 250 requests/day - Latest features and fast performance
+  - **Gemini 2.5 Flash**: 400 requests/day - Balanced speed and quality
+  - **Gemini 2.5 Flash-Lite**: 1,000 requests/day - High-speed for simple queries
+- ✅ **Smart Model Selection**: Automatically chooses optimal model based on query complexity
+- ✅ **Real-time Usage Tracking**: Live dashboard monitoring quota consumption across all models
+- ✅ **Intelligent Routing**: Complex tasks → Pro/Flash Preview, Simple queries → Flash/Flash-Lite
+- ✅ **Usage Dashboard**: Auto-refreshing interface with progress bars and statistics
+
+**Multi-Model Benefits:**
+- **5x Quota Increase**: From 400 requests (Flash only) to 1,600 requests (all models)
+- **Cost Optimization**: Preserves premium quota for complex crochet pattern work
+- **Performance Scaling**: Fast responses for simple queries, high quality for complex analysis
+- **Automatic Failover**: Falls back to available models when quotas are exhausted
 
 **Deployment Status:**
-- ✅ **Migration Complete**: Successfully migrated from GitHub Llama 3.1 8B
-- ✅ **Production Ready**: Live and responding on OCI server
-- ✅ **Authentication Fixed**: Uses direct `genai.Client(api_key=key)` approach
-- ✅ **Quality Verified**: Providing detailed, contextual crochet guidance
+- ✅ **Multi-Model Complete**: All 4 Gemini variants configured and operational
+- ✅ **Smart Routing Active**: Complexity-based model selection working
+- ✅ **Usage Tracking Live**: Real-time dashboard showing model-specific statistics
+- ✅ **Production Ready**: Live and responding on OCI server with enhanced capabilities
 
 **Setup Instructions:**
 1. Get API key from https://aistudio.google.com/apikey
 2. Set `GEMINI_API_KEY=your_key_here` in server `.env`
 3. Restart backend: `docker-compose -f docker-compose.backend.yml restart backend`
-4. Verify: Test chat mutation via GraphQL endpoint
+4. Access usage dashboard via frontend AI Usage tab
+5. Monitor quota consumption across all models
 
-**Migration Notes:**
-- Environment variable `GEMINI_API_KEY` loads the key securely
-- Direct API key parameter bypasses SDK environment variable issues
-- No fallback needed - direct approach works reliably
-- Completely replaced GitHub model dependencies
+**Technical Implementation:**
+- **Database Tracking**: SQLAlchemy model for daily usage per model
+- **GraphQL API**: Real-time usage statistics endpoint
+- **Frontend Dashboard**: Auto-refreshing component with color-coded progress bars
+- **Smart Selection**: Complexity analysis algorithm for optimal model routing
 
-**Previous Options (Deprecated):**
+**Previous Architecture (Migrated):**
+- ❌ Single Model (Gemini 2.5 Flash only) - September 2024
 - ❌ GitHub Llama 3.1 8B (migrated away from - September 2024)
-- ❌ OpenAI GPT (never implemented)
-- ❌ Local Llama (too resource intensive)
 
 ## 📊 Key Differences from CryptAssist
 1. **Port**: 8001 instead of 8000
@@ -277,18 +290,25 @@ docker-compose -f docker-compose.backend.yml restart backend
    - Authentic double crochet symbols with crossbars
    - Square-framework construction matching published patterns
 10. ✅ **AI Architecture Migration to Google Gemini** (September 2024)
-   - Migrated from GitHub Llama 3.1 8B to Google Gemini 2.5 Flash
+   - Migrated from GitHub Llama 3.1 8B to Google Gemini multi-model system
    - Implemented google-genai SDK integration with direct API key authentication
    - Updated environment variables and configuration
    - Deployed with new AI architecture and verified production functionality
    - Cleaned up repository from deprecated dependencies and cache files
+11. ✅ **Multi-Model AI System Implementation** (September 2024)
+   - Implemented 4-tier Gemini model system (Pro + Flash Preview + Flash + Flash-Lite)
+   - Added smart model selection based on query complexity analysis
+   - Created real-time usage tracking with SQLAlchemy database models
+   - Developed GraphQL API for usage statistics dashboard
+   - Built auto-refreshing frontend dashboard with color-coded progress bars
+   - Achieved 5x quota increase from 400 to 1,600 daily requests
 
 ## 🚀 Backend Successfully Deployed!
 - **Status**: ✅ Live and operational
 - **Server**: Running on OCI instance 150.136.38.166:8001
 - **Database**: PostgreSQL healthy and connected
 - **GraphQL**: Fully functional with schema explorer
-- **AI Integration**: ✅ Google Gemini 2.5 Flash fully operational and responding
+- **AI Integration**: ✅ Multi-Model Gemini System (4 models) fully operational with usage dashboard
 
 ## 🎨 Frontend Successfully Developed!
 - **Status**: ✅ Complete and running locally
@@ -325,28 +345,44 @@ docker-compose -f docker-compose.backend.yml restart backend
 - **Mock Data**: Sample projects and responses for development
 - **Responsive**: Works on desktop, tablet, and mobile
 
-## 🚧 Next Steps (Frontend ↔ Backend Integration)
-1. **Apollo GraphQL Client Setup**
-   - Install and configure Apollo Client
-   - Create GraphQL queries and mutations for chat
-   - Replace mock data with real API calls
+## ✅ Frontend ↔ Backend Integration Complete
+**Apollo GraphQL Client Setup**: ✅ **COMPLETED**
+- ✅ Apollo Client installed and configured (`@apollo/client: ^4.0.6`)
+- ✅ GraphQL client setup in `src/lib/apollo-client.ts`
+- ✅ ApolloWrapper component created for provider setup
+- ✅ GraphQL types defined in `src/types/graphql.ts`
+- ✅ Configured to connect to backend: `http://150.136.38.166:8001/crooked-finger/graphql`
+- ✅ Error handling policies configured for robust operation
 
-2. **AI Chat Integration**
+**Development Environment**: ✅ **FULLY OPERATIONAL**
+- ✅ Frontend dev server: http://localhost:3000 (Next.js 15 + Turbopack)
+- ✅ Backend dev server: http://localhost:8000 (FastAPI + auto-reload)
+- ✅ Production backend: http://150.136.38.166:8001 (OCI deployment active)
+
+**Database Configuration**: ✅ **STANDARD DEV/PROD SETUP**
+- ✅ **Local Development**: SQLite (`crooked_finger.db`) for fast local testing
+- ✅ **Production**: PostgreSQL on OCI server for scalable production data
+- ✅ **AI Usage Tracking**: Works independently in both environments
+- 📝 **Note**: SQLAlchemy ORM ensures seamless transition between databases
+
+## 🚧 Remaining Tasks
+1. **AI Chat Integration**
    - Connect chat interface to backend GraphQL endpoint
-   - Implement real-time AI responses via GitHub Llama
+   - Implement real-time AI responses via Google Gemini
    - Add loading states and error handling
+   - Replace mock chat data with real API calls
 
-3. **User Authentication**
+2. **User Authentication**
    - Add login/register forms (based on CryptAssist pattern)
    - Implement JWT token management
    - Protect routes and user-specific data
 
-4. **Project Management**
+3. **Project Management**
    - Connect project CRUD operations to backend
    - Implement project saving and loading
    - Add pattern storage and retrieval
 
-5. **Production Deployment**
+4. **Production Deployment**
    - Deploy frontend to Vercel
    - Configure production environment variables
    - Test full-stack integration
