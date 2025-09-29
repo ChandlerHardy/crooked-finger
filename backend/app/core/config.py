@@ -8,8 +8,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 10080  # 7 days
 
     # External API Keys
-    github_token: Optional[str] = None
-    openai_api_key: Optional[str] = None
+    gemini_api_key: Optional[str] = None
 
     # Environment
     environment: str = "development"

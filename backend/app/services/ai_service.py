@@ -1,37 +1,53 @@
-import httpx
+from google import genai
 from typing import Optional
 from app.core.config import settings
 from app.services.rag_service import rag_service
+import os
 
 class AIService:
     def __init__(self):
-        self.github_token = settings.github_token
-        self.openai_api_key = settings.openai_api_key
+        self.gemini_api_key = settings.gemini_api_key
+        self.client = None
+
+    def _get_client(self):
+        """Lazy initialization of Gemini client"""
+        if self.client is None and self.gemini_api_key:
+            try:
+                # First try the official docs approach with GEMINI_API_KEY
+                os.environ['GEMINI_API_KEY'] = self.gemini_api_key
+                self.client = genai.Client()
+            except Exception as e:
+                print(f"Failed with GEMINI_API_KEY, trying direct parameter: {e}")
+                try:
+                    # Fallback to direct API key parameter (which we know works)
+                    self.client = genai.Client(api_key=self.gemini_api_key)
+                except Exception as e2:
+                    print(f"Failed to create Gemini client: {e2}")
+                    return None
+        return self.client
 
     async def translate_crochet_pattern(self, pattern_text: str, user_context: str = "") -> str:
         """
-        Translate crochet pattern notation into readable instructions
+        Translate crochet pattern notation into readable instructions using Gemini
         """
-        if self.github_token:
-            return await self._translate_with_github_llama(pattern_text, user_context)
-        elif self.openai_api_key:
-            return await self._translate_with_openai(pattern_text, user_context)
+        client = self._get_client()
+        if client:
+            return await self._translate_with_gemini(pattern_text, user_context)
         else:
             return self._fallback_translation(pattern_text)
 
     async def chat_about_pattern(self, message: str, project_context: str = "", chat_history: str = "") -> str:
         """
-        Chat with AI about crochet patterns and techniques
+        Chat with AI about crochet patterns and techniques using Gemini
         """
-        if self.github_token:
-            return await self._chat_with_github_llama(message, project_context, chat_history)
-        elif self.openai_api_key:
-            return await self._chat_with_openai(message, project_context, chat_history)
+        client = self._get_client()
+        if client:
+            return await self._chat_with_gemini(message, project_context, chat_history)
         else:
-            return "AI service not configured. Please set GITHUB_TOKEN or OPENAI_API_KEY."
+            return "AI service not configured. Please set GEMINI_API_KEY."
 
-    async def _translate_with_github_llama(self, pattern_text: str, context: str) -> str:
-        """Use GitHub's AI model for pattern translation"""
+    async def _translate_with_gemini(self, pattern_text: str, context: str) -> str:
+        """Use Google Gemini for pattern translation"""
         try:
             system_prompt = """You are an expert crochet instructor. Your job is to translate standard crochet notation into clear, easy-to-follow instructions for beginners and intermediate crocheters.
 
@@ -52,32 +68,20 @@ PATTERN:
 
 Provide detailed, beginner-friendly instructions."""
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://models.inference.ai.azure.com/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.github_token}",
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    json={
-                        "model": "gpt-4o-mini",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        "max_tokens": 1000,
-                        "temperature": 0.7
-                    },
-                    timeout=30.0
-                )
-                response.raise_for_status()
-                return response.json()["choices"][0]["message"]["content"]
+            # Combine system and user prompts for Gemini
+            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+            client = self._get_client()
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=combined_prompt
+            )
+            return response.text
         except Exception as e:
             return f"Error translating pattern: {str(e)}"
 
-    async def _chat_with_github_llama(self, message: str, project_context: str, chat_history: str) -> str:
-        """Use GitHub's Llama model for crochet chat with RAG enhancement"""
+    async def _chat_with_gemini(self, message: str, project_context: str, chat_history: str) -> str:
+        """Use Google Gemini for crochet chat with RAG enhancement"""
         try:
             # Use RAG to analyze user request and enhance context
             user_analysis = rag_service.analyze_user_request(message)
@@ -120,39 +124,18 @@ Always be encouraging and provide practical, actionable advice."""
 
             user_prompt = f"{context_info}\nUSER QUESTION: {message}"
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://models.inference.ai.azure.com/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.github_token}",
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    json={
-                        "model": "gpt-4o-mini",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ],
-                        "max_tokens": 1000,
-                        "temperature": 0.7
-                    },
-                    timeout=30.0
-                )
-                response.raise_for_status()
-                return response.json()["choices"][0]["message"]["content"]
+            # Combine system and user prompts for Gemini
+            combined_prompt = f"{system_prompt}\n\n{user_prompt}"
+
+            client = self._get_client()
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=combined_prompt
+            )
+            return response.text
         except Exception as e:
             return f"Sorry, I'm having trouble responding right now: {str(e)}"
 
-    async def _translate_with_openai(self, pattern_text: str, context: str) -> str:
-        """Use OpenAI for pattern translation"""
-        # TODO: Implement OpenAI integration if needed
-        return "OpenAI integration not implemented yet."
-
-    async def _chat_with_openai(self, message: str, project_context: str, chat_history: str) -> str:
-        """Use OpenAI for crochet chat"""
-        # TODO: Implement OpenAI integration if needed
-        return "OpenAI integration not implemented yet."
 
     def _fallback_translation(self, pattern_text: str) -> str:
         """Basic pattern translation without AI"""
