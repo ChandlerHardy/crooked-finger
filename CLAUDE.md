@@ -6,8 +6,8 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 ## Tech Stack
 - **Frontend**: Next.js 15 + TypeScript, Tailwind CSS, Apollo GraphQL
 - **Backend**: FastAPI + Strawberry GraphQL, PostgreSQL
-- **AI**: GitHub Llama 3.1 8B model integration (or Claude API as alternative)
-- **Diagram Generation**: Python libraries (matplotlib, PIL, SVG)
+- **AI**: Google Gemini 2.5 Flash via Google AI Studio ⭐ **UPDATED**
+- **Diagram Generation**: Professional matplotlib charts + traditional SVG generators
 - **Deployment**: Vercel (frontend) + Oracle Cloud Infrastructure (backend)
 
 ## 🖥️ Server Access
@@ -35,13 +35,12 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 
 ## ⚙️ Key Environment Variables
 **Backend (.env on OCI server):**
-- `GITHUB_TOKEN=ghp_***` (for AI chat - configured)
+- `GEMINI_API_KEY=***` (Google AI Studio API key for Gemini 2.5 Flash)
 - `CORS_ORIGINS=https://crooked-finger-app.vercel.app,https://backend.chandlerhardy.com`
 - `ADMIN_SECRET=change-this-in-production`
 - `DATABASE_URL=postgresql://crochet_user:crochet_password@postgres:5432/crooked_finger_db`
 
 **Frontend (.env file created):**
-- `GITHUB_TOKEN=ghp_***` (configured for AI integration)
 - `NEXT_PUBLIC_GRAPHQL_URL=http://150.136.38.166:8001/crooked-finger/graphql`
 - `NEXT_PUBLIC_API_URL=http://localhost:3000`
 - `NEXT_PUBLIC_BACKEND_URL=http://150.136.38.166:8001`
@@ -155,12 +154,21 @@ docker-compose -f docker-compose.backend.yml down && docker-compose -f docker-co
 ```
 
 ### AI Service Not Working
-**Symptoms**: "AI service not configured" or 404 errors from GitHub API
+**Symptoms**: "AI service not configured" or Gemini API errors
 
 **Check**:
-1. GITHUB_TOKEN is set in `.env`
-2. API endpoint is correct: `https://models.inference.ai.azure.com/chat/completions`
-3. Test directly: `docker-compose exec backend env | grep GITHUB_TOKEN`
+1. GEMINI_API_KEY is set in `.env` (get from https://aistudio.google.com/apikey)
+2. API key is valid and has quota remaining
+3. Test directly: `docker-compose exec backend env | grep GEMINI_API_KEY`
+
+**Fix**:
+```bash
+# SSH to server and set API key
+ssh ubuntu@150.136.38.166 -i /Users/chandlerhardy/.ssh/ampere.key
+cd crooked-finger
+echo "GEMINI_API_KEY=your_actual_key_here" >> .env
+docker-compose -f docker-compose.backend.yml restart backend
+```
 
 ## 🎨 Enhanced Diagram Generation System (September 2024)
 
@@ -213,20 +221,24 @@ docker-compose -f docker-compose.backend.yml down && docker-compose -f docker-co
 3. **Improved Symbol Quality**: Double crochet symbols with proper crossbar placement
 4. **Pattern Detection Fix**: Correctly routes general granny square requests to traditional chart generation
 
-## 🤖 AI Integration Options
-**Option 1: GitHub Llama (Existing Setup)**
-- ✅ Already working in CryptAssist
-- ✅ Free after setup
-- ✅ Good for crochet pattern understanding
+## 🤖 AI Integration - Google AI Studio (Gemini)
+**Current Architecture: Google Gemini 2.5 Flash** ⭐ **ACTIVE**
+- ✅ Fast and efficient for crochet pattern understanding
+- ✅ Excellent creative capabilities for pattern explanations
+- ✅ Reliable API with good uptime
+- ✅ Pay-per-use with generous free tier
+- ✅ No token limitations like GitHub models
+- 🔑 API Key: Get free key from [Google AI Studio](https://aistudio.google.com/apikey)
 
-**Option 2: Claude API**
-- ✅ Excellent for creative tasks and pattern explanation
-- ✅ Better at contextual understanding
-- 💰 Pay-per-use
+**Setup Instructions:**
+1. Get API key from https://aistudio.google.com/apikey
+2. Set `GEMINI_API_KEY=your_key_here` in server `.env`
+3. Restart backend: `docker-compose -f docker-compose.backend.yml restart backend`
 
-**Option 3: Local Llama**
-- ✅ Complete privacy
-- ❌ Resource intensive on OCI
+**Previous Options (Deprecated):**
+- ❌ GitHub Llama 3.1 8B (migrated away from)
+- ❌ OpenAI GPT (never implemented)
+- ❌ Local Llama (too resource intensive)
 
 ## 📊 Key Differences from CryptAssist
 1. **Port**: 8001 instead of 8000
@@ -250,6 +262,11 @@ docker-compose -f docker-compose.backend.yml down && docker-compose -f docker-co
    - Fixed Round 2 corner construction with proper ch-2 positioning
    - Authentic double crochet symbols with crossbars
    - Square-framework construction matching published patterns
+10. ✅ **AI Architecture Migration to Google Gemini** (September 2024)
+   - Migrated from GitHub Llama 3.1 8B to Google Gemini 2.5 Flash
+   - Implemented google-genai SDK integration
+   - Updated environment variables and configuration
+   - Deployed with new AI architecture
 
 ## 🚀 Backend Successfully Deployed!
 - **Status**: ✅ Live and operational
