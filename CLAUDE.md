@@ -365,12 +365,18 @@ docker-compose -f docker-compose.backend.yml restart backend
 - ✅ **AI Usage Tracking**: Works independently in both environments
 - 📝 **Note**: SQLAlchemy ORM ensures seamless transition between databases
 
+## ✅ Latest Completed Tasks
+1. **AI Chat Integration** ✅ **COMPLETED**
+   - ✅ Connected chat interface to backend GraphQL endpoint
+   - ✅ Implemented real-time AI responses via multi-model Gemini system
+   - ✅ Added loading states and error handling
+   - ✅ Replaced mock chat data with real API calls
+   - ✅ Chat history preservation working (100 message context window)
+   - ✅ Multi-line textarea input with Enter-to-send functionality
+   - ✅ Professional ReactMarkdown rendering with custom styling
+   - ✅ Auto-scroll chat with proper message layout
+
 ## 🚧 Remaining Tasks
-1. **AI Chat Integration**
-   - Connect chat interface to backend GraphQL endpoint
-   - Implement real-time AI responses via Google Gemini
-   - Add loading states and error handling
-   - Replace mock chat data with real API calls
 
 2. **User Authentication**
    - Add login/register forms (based on CryptAssist pattern)
@@ -386,6 +392,54 @@ docker-compose -f docker-compose.backend.yml restart backend
    - Deploy frontend to Vercel
    - Configure production environment variables
    - Test full-stack integration
+
+## ⚠️ Temporarily Disabled Features
+
+### SVG Chart Rendering (Frontend)
+**Status**: ⚠️ **TEMPORARILY DISABLED**
+**Location**: `src/components/ChatInterface.tsx` (lines 147-154, 170-177)
+**Issue**: ReactMarkdown SVG detection causing duplicate rendering
+
+**Problem Description**:
+- Backend generates professional SVG crochet charts successfully
+- Frontend ReactMarkdown component detects SVG fragments multiple times
+- Results in both rendered charts AND raw SVG code being displayed
+- SVG content appears as: complete chart + opening tag text + closing tag text
+
+**Current Status**:
+- SVG detection logic disabled with `if (false)` condition
+- Charts will appear as raw code blocks until fixed
+- Backend chart generation still works and is ready
+
+**Technical Details**:
+```typescript
+// Currently disabled in ChatInterface.tsx
+// TODO: Chart generation temporarily disabled - see CLAUDE.md for details
+// SVG chart rendering needs better detection logic to avoid duplicate rendering
+// Current issue: SVG fragments show as both code and rendered charts
+
+// Temporarily disabled SVG detection
+if (false) {
+  return null;
+}
+```
+
+**Root Cause**:
+- ReactMarkdown parses AI responses and splits SVG content into multiple code blocks
+- Each fragment triggers the SVG detection logic separately
+- Results in: `<svg>` tag + chart rendering + `</svg>` tag all showing
+
+**To Fix Later**:
+1. Implement smarter SVG detection that recognizes complete vs. partial SVG content
+2. Add message-level SVG extraction instead of per-code-block detection
+3. Consider pre-processing AI responses to consolidate SVG fragments
+4. Alternative: Move SVG rendering to backend and send as base64 images
+
+**Impact**:
+- ✅ **Core chat functionality works perfectly**
+- ✅ **AI responses and markdown formatting work**
+- ⚠️ **Charts show as code instead of visual diagrams**
+- ✅ **Backend chart generation ready for re-enabling**
 
 ---
 *This file provides essential deployment info condensed from CryptAssist architecture for the Crooked-Finger crochet assistant project.*

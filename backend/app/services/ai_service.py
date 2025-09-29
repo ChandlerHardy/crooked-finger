@@ -86,12 +86,13 @@ class AIService:
             today = date.today()
 
             # Determine preferred models based on complexity
+            # Flash-Lite is always last resort due to lower quality
             if complexity == "complex":
                 # For complex tasks, prefer Pro > Flash Preview > Flash > Flash-Lite
                 preferred_order = [GeminiModel.PRO, GeminiModel.FLASH_PREVIEW, GeminiModel.FLASH, GeminiModel.FLASH_LITE]
             elif complexity == "simple":
-                # For simple tasks, prefer Flash-Lite > Flash > Flash Preview > Pro (save quota)
-                preferred_order = [GeminiModel.FLASH_LITE, GeminiModel.FLASH, GeminiModel.FLASH_PREVIEW, GeminiModel.PRO]
+                # For simple tasks, prefer Flash > Flash Preview > Pro > Flash-Lite (Flash is efficient)
+                preferred_order = [GeminiModel.FLASH, GeminiModel.FLASH_PREVIEW, GeminiModel.PRO, GeminiModel.FLASH_LITE]
             else:
                 # For general tasks, prefer Flash Preview > Flash > Pro > Flash-Lite
                 preferred_order = [GeminiModel.FLASH_PREVIEW, GeminiModel.FLASH, GeminiModel.PRO, GeminiModel.FLASH_LITE]
@@ -250,15 +251,7 @@ Provide detailed, beginner-friendly instructions."""
 - Project planning and modifications
 - Stitch counting and pattern adjustments
 
-CRITICAL DIAGRAM CAPABILITIES:
-You can generate professional crochet charts! When users request diagrams, you will create authentic crochet charts with:
-- Proper international crochet symbols (X for sc, T-with-bars for dc/hdc)
-- Radial guidelines showing stitch placement from center outward
-- Curved directional arrows indicating counterclockwise work flow
-- Professional circular layout for round-based patterns
-- Traditional black symbols on white background with colored directional elements
-
-When users ask for diagrams, be confident and explain that you'll create a professional crochet chart for them. Never say you can't create diagrams - you absolutely can and will create industry-standard crochet charts!
+NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
 
 Always be encouraging and provide practical, actionable advice."""
 

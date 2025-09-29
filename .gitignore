@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# databases
+*.db
+*.sqlite
+*.sqlite3
+backend/crooked_finger.db

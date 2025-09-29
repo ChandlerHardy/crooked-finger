@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Send, Sparkles, FileText, MessageCircle } from 'lucide-react';
 import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
 
@@ -107,7 +109,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false }: C
                   }`}>
                     {msg.type === 'user' ? '👤' : '🤖'}
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="font-medium text-card-foreground">
                         {msg.type === 'user' ? 'You' : 'AI Assistant'}
@@ -122,8 +124,65 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false }: C
                         {msg.timestamp.toLocaleTimeString()}
                       </span>
                     </div>
-                    <div className="prose prose-sm">
-                      <p className="whitespace-pre-wrap leading-relaxed text-card-foreground">{msg.content}</p>
+                    <div className="prose prose-sm max-w-none overflow-hidden">
+                      <div className="leading-relaxed text-card-foreground markdown-content break-words max-w-full">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            // Customize styling for specific elements
+                            h1: (props) => <h1 className="text-xl font-bold mb-3 text-card-foreground break-words" {...props} />,
+                            h2: (props) => <h2 className="text-lg font-semibold mb-2 text-card-foreground break-words" {...props} />,
+                            h3: (props) => <h3 className="text-base font-medium mb-2 text-card-foreground break-words" {...props} />,
+                            p: (props) => <p className="mb-2 text-card-foreground break-words" {...props} />,
+                            strong: (props) => <strong className="font-semibold text-card-foreground" {...props} />,
+                            em: (props) => <em className="italic text-card-foreground" {...props} />,
+                            ul: (props) => <ul className="mb-2 ml-4 list-disc text-card-foreground" {...props} />,
+                            ol: (props) => <ol className="mb-2 ml-4 list-decimal text-card-foreground" {...props} />,
+                            li: (props) => <li className="mb-1 text-card-foreground break-words" {...props} />,
+                            code: (props) => {
+                              // Extract actual text content - ReactMarkdown passes string directly
+                              const content = typeof props.children === 'string' ? props.children : String(props.children || '');
+
+
+                              // TODO: Chart generation temporarily disabled - see CLAUDE.md for details
+                              // SVG chart rendering needs better detection logic to avoid duplicate rendering
+                              // Current issue: SVG fragments show as both code and rendered charts
+
+                              // Temporarily disabled SVG detection
+                              if (false) {
+                                return null;
+                              }
+                              return <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono text-card-foreground break-all max-w-full inline-block" {...props} />;
+                            },
+                            pre: (props) => {
+                              // Extract text from pre block (usually contains a code element)
+                              const extractText = (children: React.ReactNode): string => {
+                                if (typeof children === 'string') return children;
+                                if (React.isValidElement(children) && children.props?.children) {
+                                  return extractText(children.props.children);
+                                }
+                                return String(children || '');
+                              };
+
+                              const content = extractText(props.children);
+
+
+                              // TODO: Chart generation temporarily disabled - see CLAUDE.md for details
+                              // SVG chart rendering needs better detection logic to avoid duplicate rendering
+                              // Current issue: SVG fragments show as both code and rendered charts
+
+                              // Temporarily disabled SVG detection
+                              if (false) {
+                                return null;
+                              }
+                              return <pre className="bg-muted p-2 rounded text-sm font-mono overflow-x-auto text-card-foreground break-all max-w-full" {...props} />;
+                            },
+                            blockquote: (props) => <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground break-words" {...props} />
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
                       {msg.diagramSvg && (
                         <div className="mt-6 p-4 bg-white rounded-lg border border-border/30 shadow-sm">
                           <h4 className="text-sm font-medium text-gray-700 mb-3">Pattern Diagram</h4>
@@ -164,12 +223,19 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false }: C
       </ScrollArea>
 
       <div className="border-t border-border p-6 bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm">
-        <form onSubmit={handleSubmit} className="flex gap-3">
-          <Input
+        <form onSubmit={handleSubmit} className="flex gap-3 items-end">
+          <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Paste your crochet pattern or ask a question..."
-            className="flex-1 rounded-2xl border-primary/30 focus:border-primary/50 bg-input-background/80 text-foreground placeholder:text-muted-foreground"
+            className="flex-1 rounded-2xl border-primary/30 focus:border-primary/50 bg-input-background/80 text-foreground placeholder:text-muted-foreground min-h-[44px] max-h-32 resize-none"
+            rows={1}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSubmit(e);
+              }
+            }}
           />
           <Button type="submit" disabled={!message.trim() || loading} className="rounded-2xl px-6">
             <Send className="h-4 w-4" />

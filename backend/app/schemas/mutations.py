@@ -19,6 +19,7 @@ from app.services.flowing_granny_service import flowing_granny_service
 from app.services.matplotlib_crochet_service import matplotlib_crochet_service
 from app.services.rag_service import rag_service
 import re
+from sqlalchemy.orm import Session
 
 @strawberry.type
 class Mutation:
@@ -161,21 +162,31 @@ class Mutation:
         context: Optional[str] = None
     ) -> str:
         """Chat with AI assistant about crochet patterns and techniques"""
+        db = next(get_db())
         try:
+            # Get recent chat history for context (generous limit with 1M token context window)
+            chat_history = get_recent_chat_history(db, limit=100)
+
             # Check if user is requesting a diagram
             if requests_diagram(message):
                 # Generate diagram and include it in the response
-                return await _chat_with_diagram_generation(message, context)
+                response = await _chat_with_diagram_generation(message, context, chat_history)
+            else:
+                # Regular chat with history
+                response = await ai_service.chat_about_pattern(
+                    message=message,
+                    project_context=context or "",
+                    chat_history=chat_history
+                )
 
-            # Regular chat without diagram
-            response = await ai_service.chat_about_pattern(
-                message=message,
-                project_context=context or "",
-                chat_history=""
-            )
+            # Store the conversation in database
+            store_chat_message(db, message, response)
+
             return response
         except Exception as e:
             return f"I'm having trouble responding right now. Please try again in a moment. (Error: {str(e)})"
+        finally:
+            db.close()
 
     @strawberry.field
     async def chat_with_assistant_enhanced(
@@ -184,15 +195,19 @@ class Mutation:
         context: Optional[str] = None
     ) -> ChatResponse:
         """Enhanced chat with AI assistant that can generate pattern diagrams"""
+        db = next(get_db())
         try:
+            # Get recent chat history for context (generous limit with 1M token context window)
+            chat_history = get_recent_chat_history(db, limit=100)
+
             # Analyze user request for pattern type and diagram needs
             user_analysis = rag_service.analyze_user_request(message)
 
-            # Use the AI service to get response
+            # Use the AI service to get response with chat history
             ai_response = await ai_service.chat_about_pattern(
                 message=message,
                 project_context=context or "",
-                chat_history=""
+                chat_history=chat_history
             )
 
             # Check if the message or response contains pattern information
@@ -201,26 +216,16 @@ class Mutation:
             diagram_svg = None
             diagram_png = None
 
-            # Check if user is requesting a diagram AND we have pattern content
-            if user_analysis['requests_diagram'] and has_pattern:
-                try:
-                    # Use specialized matplotlib-based generator for all patterns
-                    if user_analysis['is_granny_square']:
-                        # Generate professional granny square chart with matplotlib
-                        pattern_text = extract_pattern_text(message, ai_response) or message
-                        diagram_svg = matplotlib_crochet_service.generate_granny_square_chart(pattern_text)
-                    else:
-                        # Use matplotlib for general patterns too
-                        pattern_text = extract_pattern_text(message, ai_response)
-                        if pattern_text:
-                            # Parse and generate diagrams with matplotlib
-                            pattern_data = pattern_service.parse_pattern_structure(pattern_text)
+            # TODO: Diagram generation temporarily disabled - see CLAUDE.md for details
+            # Frontend SVG rendering needs better detection logic to avoid duplicate rendering
+            # Temporarily disabled until frontend rendering is fixed
 
-                            if pattern_data.get('rounds') and len(pattern_data['rounds']) > 0:
-                                diagram_svg = matplotlib_crochet_service.generate_pattern_chart(pattern_data)
-                except Exception as diagram_error:
-                    # If diagram generation fails, just continue without it
-                    print(f"Diagram generation failed: {diagram_error}")
+            # Check if user is requesting a diagram AND we have pattern content
+            if False:  # Temporarily disabled
+                pass
+
+            # Store the conversation in database
+            store_chat_message(db, message, ai_response)
 
             return ChatResponse(
                 message=ai_response,
@@ -235,15 +240,17 @@ class Mutation:
                 message=f"I'm having trouble responding right now. Please try again in a moment. (Error: {str(e)})",
                 has_pattern=False
             )
+        finally:
+            db.close()
 
-async def _chat_with_diagram_generation(message: str, context: Optional[str]) -> str:
+async def _chat_with_diagram_generation(message: str, context: Optional[str], chat_history: str = "") -> str:
     """Handle chat requests that include diagram generation"""
     try:
         # Get AI response first
         ai_response = await ai_service.chat_about_pattern(
             message=message,
             project_context=context or "",
-            chat_history=""
+            chat_history=chat_history
         )
 
         # Try to extract pattern from message or AI response for diagram
@@ -357,3 +364,39 @@ def extract_pattern_text(message: str, ai_response: str) -> Optional[str]:
         return message
 
     return None
+
+
+def get_recent_chat_history(db: Session, user_id: int = None, limit: int = 100) -> str:
+    """Get recent chat history formatted for AI context"""
+    query = db.query(models.ChatMessage)
+
+    if user_id:
+        query = query.filter(models.ChatMessage.user_id == user_id)
+
+    # Get recent messages ordered by creation time
+    recent_messages = query.order_by(models.ChatMessage.created_at.desc()).limit(limit).all()
+
+    if not recent_messages:
+        return ""
+
+    # Format as conversation history (reverse to chronological order)
+    history_parts = []
+    for msg in reversed(recent_messages):
+        history_parts.append(f"User: {msg.message}")
+        history_parts.append(f"Assistant: {msg.response}")
+
+    return "\n".join(history_parts)
+
+
+def store_chat_message(db: Session, user_message: str, ai_response: str, user_id: int = None, project_id: int = None) -> None:
+    """Store chat message and response in database"""
+    chat_message = models.ChatMessage(
+        message=user_message,
+        response=ai_response,
+        user_id=user_id,
+        project_id=project_id,
+        created_at=datetime.utcnow()
+    )
+
+    db.add(chat_message)
+    db.commit()
