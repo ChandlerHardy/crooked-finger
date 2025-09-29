@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
-import { useQuery } from '@apollo/client/react/index.js';
+import React, { useState, useEffect } from 'react';
+import { useQuery } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Zap, Activity, TrendingUp, Gauge } from 'lucide-react';
+import { Zap, Activity, TrendingUp, Gauge, Clock } from 'lucide-react';
 import { AIUsageDashboard as AIUsageDashboardType, GetAIUsageDashboardResponse } from '@/types/graphql';
 
 const GET_AI_USAGE_DASHBOARD = gql`
@@ -65,6 +65,8 @@ const formatModelName = (modelName: string) => {
 };
 
 export default function AIUsageDashboardComponent() {
+  const [timeUntilReset, setTimeUntilReset] = useState('');
+
   const { data, loading, error, refetch } = useQuery<GetAIUsageDashboardResponse>(
     GET_AI_USAGE_DASHBOARD,
     {
@@ -72,6 +74,43 @@ export default function AIUsageDashboardComponent() {
       errorPolicy: 'all'
     }
   );
+
+  // Calculate time until quota reset (midnight PST)
+  useEffect(() => {
+    const updateCountdown = () => {
+      const now = new Date();
+
+      // Create midnight PST for today
+      const pstOffset = -8; // PST is UTC-8 (during standard time)
+      const pdtOffset = -7; // PDT is UTC-7 (during daylight time)
+
+      // Determine if we're in daylight saving time (approximate)
+      const isDST = now.getMonth() >= 2 && now.getMonth() <= 10; // March-November roughly
+      const timezoneOffset = isDST ? pdtOffset : pstOffset;
+
+      // Get next midnight PST/PDT
+      const nextMidnightPST = new Date();
+      nextMidnightPST.setUTCDate(now.getUTCDate() + 1);
+      nextMidnightPST.setUTCHours(-timezoneOffset, 0, 0, 0); // Convert PST/PDT to UTC
+
+      const timeDiff = nextMidnightPST.getTime() - now.getTime();
+
+      if (timeDiff > 0) {
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+
+        setTimeUntilReset(`${hours}h ${minutes}m ${seconds}s`);
+      } else {
+        setTimeUntilReset('Resetting now...');
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   if (loading) {
     return (
@@ -183,6 +222,24 @@ export default function AIUsageDashboardComponent() {
             <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
               {dashboard.totalRemaining}
             </p>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Quota Reset Information */}
+        <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+            <span className="font-semibold text-orange-700 dark:text-orange-300">
+              Quota Reset Timer
+            </span>
+          </div>
+          <p className="text-sm text-orange-600 dark:text-orange-400 mb-2">
+            All model quotas reset at midnight PST/PDT (Pacific Time)
+          </p>
+          <div className="text-lg font-mono font-bold text-orange-900 dark:text-orange-100">
+            Next reset in: {timeUntilReset}
           </div>
         </div>
 

@@ -21,9 +21,10 @@ interface ChatInterfaceProps {
   chatHistory: ChatMessage[];
   onSendMessage: (message: string) => void;
   loading?: boolean;
+  hideHeader?: boolean;
 }
 
-export function ChatInterface({ chatHistory, onSendMessage, loading = false }: ChatInterfaceProps) {
+export function ChatInterface({ chatHistory, onSendMessage, loading = false, hideHeader = false }: ChatInterfaceProps) {
   const [message, setMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -42,18 +43,20 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false }: C
   };
 
   return (
-    <div className="flex flex-col h-full max-h-screen">
-      <div className="border-b border-border p-6 bg-gradient-to-r from-primary/15 to-primary/5">
-        <h2 className="text-xl font-medium flex items-center gap-3 text-primary-foreground">
-          <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          GRANNi
-        </h2>
-        <p className="text-sm text-primary-foreground/80 mt-2 leading-relaxed">
-          Transform complex crochet notation into easy-to-follow, cozy instructions
-        </p>
-      </div>
+    <div className="flex flex-col h-full">
+      {!hideHeader && (
+        <div className="border-b border-border p-6 bg-gradient-to-r from-primary/15 to-primary/5">
+          <h2 className="text-xl font-medium flex items-center gap-3 text-primary-foreground">
+            <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-primary-foreground" />
+            </div>
+            GRANNi
+          </h2>
+          <p className="text-sm text-primary-foreground/80 mt-2 leading-relaxed">
+            Transform complex crochet notation into easy-to-follow, cozy instructions
+          </p>
+        </div>
+      )}
 
       <ScrollArea className="flex-1 p-6 overflow-auto" ref={scrollAreaRef}>
         <div className="space-y-4 max-w-4xl min-h-full">

@@ -5,7 +5,7 @@ from strawberry.types import Info
 from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
-    User, AuthResponse, CrochetProject, ChatResponse,
+    User, AuthResponse, CrochetProject, ChatResponse, ResetUsageResponse,
     RegisterInput, LoginInput, CreateProjectInput
 )
 from app.utils.auth import (
@@ -242,6 +242,23 @@ class Mutation:
             )
         finally:
             db.close()
+
+    @strawberry.field
+    async def reset_daily_usage(self) -> ResetUsageResponse:
+        """Reset all AI model usage for today"""
+        try:
+            result = ai_service.reset_daily_usage()
+            return ResetUsageResponse(
+                success=result["success"],
+                message=result["message"],
+                reset_date=result["reset_date"]
+            )
+        except Exception as e:
+            return ResetUsageResponse(
+                success=False,
+                message=f"Failed to reset usage: {str(e)}",
+                reset_date=None
+            )
 
 async def _chat_with_diagram_generation(message: str, context: Optional[str], chat_history: str = "") -> str:
     """Handle chat requests that include diagram generation"""

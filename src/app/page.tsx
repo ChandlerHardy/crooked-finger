@@ -6,6 +6,7 @@ import { Navigation } from '../components/Navigation';
 import { HomePage } from '../components/HomePage';
 import { ChatInterface } from '../components/ChatInterface';
 import { ProjectsPage } from '../components/ProjectsPage';
+import { ProjectDetailPage } from '../components/ProjectDetailPage';
 import { PatternLibrary } from '../components/PatternLibrary';
 import AIUsageDashboardComponent from '../components/AIUsageDashboard';
 import { CHAT_WITH_ASSISTANT } from '../lib/graphql/mutations';
@@ -36,6 +37,7 @@ interface ChatMessage {
 
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('home');
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   // const [chatWithAssistant, { loading: chatLoading }] = useMutation<
   //   ChatWithAssistantResponse,
@@ -43,12 +45,39 @@ export default function Home() {
   // >(CHAT_WITH_ASSISTANT);
 
   // Mock data for demonstration
-  const [projects] = useState<Project[]>([
+  const [projects, setProjects] = useState<Project[]>([
     {
       id: '1',
       name: 'Cozy Blanket',
       description: 'A warm granny square blanket for winter evenings',
-      pattern: 'Ch 4, join with sl st to form ring...',
+      pattern: `CLASSIC GRANNY SQUARE BLANKET
+
+Materials:
+- Medium weight yarn (4) in 4 colors
+- Size H/8 (5.0mm) crochet hook
+- Tapestry needle for joining
+
+GRANNY SQUARE (Make 48):
+
+Round 1: Ch 4, join with sl st to form ring.
+Ch 3 (counts as 1st dc), 2 dc in ring, ch 2, *3 dc in ring, ch 2*, repeat from * 2 more times. Join with sl st to top of ch-3. (12 dc, 4 ch-2 spaces)
+
+Round 2: Sl st to first ch-2 space, ch 3, (2 dc, ch 2, 3 dc) in same space (corner made), ch 1, *(3 dc, ch 2, 3 dc) in next ch-2 space, ch 1*, repeat from * 2 more times. Join with sl st to top of ch-3.
+
+Round 3: Sl st to first ch-2 space, ch 3, (2 dc, ch 2, 3 dc) in same space, ch 1, 3 dc in next ch-1 space, ch 1, *(3 dc, ch 2, 3 dc) in next ch-2 space, ch 1, 3 dc in next ch-1 space, ch 1*, repeat from * 2 more times. Join with sl st to top of ch-3.
+
+Continue in this manner until square measures 4 inches.
+
+ASSEMBLY:
+Arrange squares in an 8x6 grid.
+Join squares using single crochet seams.
+
+BORDER:
+Round 1: Work sc around entire blanket edge.
+Round 2: Ch 1, sc in each sc around.
+Round 3: Repeat Round 2.
+
+Fasten off and weave in ends.`,
       status: 'in-progress',
       difficulty: 'beginner',
       tags: ['blanket', 'granny-square', 'winter'],
@@ -60,7 +89,36 @@ export default function Home() {
       id: '2',
       name: 'Baby Booties',
       description: 'Adorable booties for newborns',
-      pattern: 'Foundation: Ch 15...',
+      pattern: `BABY BOOTIES PATTERN
+
+Size: 0-3 months
+
+Materials:
+- Light weight yarn (3) in baby colors
+- Size F/5 (3.75mm) crochet hook
+- Tapestry needle
+- Small buttons (optional)
+
+SOLE:
+Ch 15.
+Row 1: Sc in 2nd ch from hook, sc in next 12 ch, 3 sc in last ch. Working on opposite side of foundation ch, sc in next 12 ch, 2 sc in last ch. (30 sc)
+Row 2: Ch 1, turn. 2 sc in first sc, sc in next 12 sc, 2 sc in next 3 sc, sc in next 12 sc, 2 sc in last 2 sc. (36 sc)
+
+SIDES:
+Row 3: Ch 1, turn. Sc in each sc around. (36 sc)
+Rows 4-8: Repeat Row 3.
+
+TOE SHAPING:
+Row 9: Ch 1, turn. Sc in first 11 sc, [sc2tog] 7 times, sc in last 11 sc. (29 sc)
+Row 10: Ch 1, turn. Sc in first 11 sc, [sc2tog] 3 times, sc in last 12 sc. (26 sc)
+
+ANKLE:
+Rows 11-14: Ch 1, turn. Sc in each sc around.
+
+STRAP (optional):
+Ch 20, sl st to opposite side of bootie.
+
+Make 2.`,
       status: 'completed',
       difficulty: 'intermediate',
       tags: ['baby', 'booties', 'gift'],
@@ -173,8 +231,18 @@ export default function Home() {
   };
 
   const handleProjectClick = (project: Project) => {
-    // In a real app, this would navigate to project details
-    console.log('Project clicked:', project.name);
+    setSelectedProject(project);
+    setCurrentPage('project-detail');
+  };
+
+  const handleUpdateProject = (updatedProject: Project) => {
+    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+    setSelectedProject(updatedProject);
+  };
+
+  const handleBackToProjects = () => {
+    setSelectedProject(null);
+    setCurrentPage('projects');
   };
 
   const renderCurrentPage = () => {
@@ -197,6 +265,20 @@ export default function Home() {
         );
       case 'projects':
         return (
+          <ProjectsPage
+            projects={projects}
+            onCreateProject={handleCreateProject}
+            onProjectClick={handleProjectClick}
+          />
+        );
+      case 'project-detail':
+        return selectedProject ? (
+          <ProjectDetailPage
+            project={selectedProject}
+            onBack={handleBackToProjects}
+            onUpdateProject={handleUpdateProject}
+          />
+        ) : (
           <ProjectsPage
             projects={projects}
             onCreateProject={handleCreateProject}

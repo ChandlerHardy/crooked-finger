@@ -376,6 +376,23 @@ docker-compose -f docker-compose.backend.yml restart backend
    - ✅ Professional ReactMarkdown rendering with custom styling
    - ✅ Auto-scroll chat with proper message layout
 
+2. **Project Detail Page Enhancements** ✅ **COMPLETED (September 2024)**
+   - ✅ **Individual Pattern Editing**: Added dedicated "Edit Pattern" button with independent save/cancel controls
+   - ✅ **Clean Project Chat Interface**: Removed mock sample chat data for fresh project conversations
+   - ✅ **Streamlined Chat UI**: Added `hideHeader` prop to ChatInterface component to remove large GRANNi header in project context
+   - ✅ **Real AI Integration**: Connected project chat to live GraphQL endpoint with full pattern context
+   - ✅ **Pattern-Aware Responses**: AI receives complete project details (name, description, difficulty, status, tags, full pattern text)
+   - ✅ **Context-Specific Assistance**: AI can reference specific pattern instructions, material lists, and project requirements
+   - ✅ **Loading States**: Added proper loading indicators and error handling for project chat
+   - ✅ **Pattern Knowledge Transfer**: Verified AI correctly reads and quotes from project patterns
+
+3. **AI Usage Dashboard with Reset Functionality** ✅ **COMPLETED (September 2024)**
+   - ✅ **Real-time Quota Timer**: Added countdown to midnight PST/PDT reset with automatic DST detection
+   - ✅ **Manual Reset Capability**: Implemented `resetDailyUsage` GraphQL mutation for immediate usage reset
+   - ✅ **Reset Verification**: Confirmed reset clears all model usage and restores full quota (1600 requests total)
+   - ✅ **Backend Integration**: Added `reset_daily_usage()` method to AI service with proper database cleanup
+   - ✅ **Reset Response Tracking**: Added ResetUsageResponse type with success confirmation and reset date
+
 ## 🚧 Remaining Tasks
 
 2. **User Authentication**

@@ -121,3 +121,9 @@ class AIUsageDashboard:
     total_requests_today: int
     total_remaining: int
     models: List[ModelUsageStats]
+
+@strawberry.type
+class ResetUsageResponse:
+    success: bool
+    message: str
+    reset_date: Optional[str] = None

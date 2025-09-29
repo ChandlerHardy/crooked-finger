@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # Environment
     environment: str = "development"
     debug: bool = True
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,http://localhost:3001"
 
     # Admin secret for creating admin users
     admin_secret: str = "local-admin-secret"

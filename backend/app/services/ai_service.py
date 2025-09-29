@@ -79,6 +79,35 @@ class AIService:
             db.add(usage)
         db.commit()
 
+    def reset_daily_usage(self) -> Dict[str, Any]:
+        """Reset all AI model usage for today"""
+        db = SessionLocal()
+        try:
+            today = date.today()
+
+            # Delete all usage records for today
+            deleted_count = db.query(AIModelUsage).filter(
+                AIModelUsage.date == today
+            ).delete()
+
+            db.commit()
+
+            return {
+                "success": True,
+                "message": f"Reset usage for {deleted_count} model entries on {today}",
+                "reset_date": today.isoformat()
+            }
+
+        except Exception as e:
+            db.rollback()
+            return {
+                "success": False,
+                "message": f"Failed to reset usage: {str(e)}",
+                "reset_date": None
+            }
+        finally:
+            db.close()
+
     def _select_best_available_model(self, complexity: str = "general") -> Optional[GeminiModel]:
         """Select the best available model based on complexity and current usage"""
         db = SessionLocal()
