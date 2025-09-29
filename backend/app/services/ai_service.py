@@ -2,7 +2,6 @@ from google import genai
 from typing import Optional
 from app.core.config import settings
 from app.services.rag_service import rag_service
-import os
 
 class AIService:
     def __init__(self):
@@ -13,17 +12,11 @@ class AIService:
         """Lazy initialization of Gemini client"""
         if self.client is None and self.gemini_api_key:
             try:
-                # First try the official docs approach with GEMINI_API_KEY
-                os.environ['GEMINI_API_KEY'] = self.gemini_api_key
-                self.client = genai.Client()
+                # Use direct API key parameter (proven to work)
+                self.client = genai.Client(api_key=self.gemini_api_key)
             except Exception as e:
-                print(f"Failed with GEMINI_API_KEY, trying direct parameter: {e}")
-                try:
-                    # Fallback to direct API key parameter (which we know works)
-                    self.client = genai.Client(api_key=self.gemini_api_key)
-                except Exception as e2:
-                    print(f"Failed to create Gemini client: {e2}")
-                    return None
+                print(f"Failed to create Gemini client with direct API key: {e}")
+                return None
         return self.client
 
     async def translate_crochet_pattern(self, pattern_text: str, user_context: str = "") -> str:
