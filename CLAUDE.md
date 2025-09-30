@@ -452,6 +452,9 @@ docker-compose -f docker-compose.backend.yml restart backend
    - ✅ **Multiple URL Formats**: Support for `youtube.com/watch?v=`, `youtu.be/`, and video IDs
    - ✅ **Caption Support**: Works with auto-generated and manual captions
    - ✅ **API Upgrade**: Updated from v0.6.2 to v1.2.2 to fix YouTube API compatibility
+   - ✅ **Thumbnail Support**: Automatic thumbnail fetching (maxresdefault + hqdefault fallback)
+   - ✅ **Rate Limiting Protection**: 2-second delays between requests to avoid YouTube IP blocks
+   - ✅ **IP Block Detection**: User-friendly error messages when YouTube blocks requests
    - ✅ **Production Ready**: Tested with real videos (487 words fetched successfully)
 
 ## 🚧 Remaining Tasks

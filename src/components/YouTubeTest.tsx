@@ -39,6 +39,8 @@ export function YouTubeTest() {
                 transcript
                 wordCount
                 language
+                thumbnailUrl
+                thumbnailUrlHq
                 error
               }
             }
@@ -126,6 +128,28 @@ export function YouTubeTest() {
                     ✅ Successfully fetched transcript!
                   </AlertDescription>
                 </Alert>
+
+                {result.thumbnailUrl && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-sm">Video Thumbnail</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <img
+                        src={result.thumbnailUrl}
+                        alt={`Thumbnail for video ${result.videoId}`}
+                        className="w-full rounded-lg"
+                        onError={(e) => {
+                          // Fallback to HQ thumbnail if maxres fails
+                          const target = e.target as HTMLImageElement;
+                          if (result.thumbnailUrlHq && target.src !== result.thumbnailUrlHq) {
+                            target.src = result.thumbnailUrlHq;
+                          }
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
 
                 <div className="grid grid-cols-2 gap-4">
                   <Card>

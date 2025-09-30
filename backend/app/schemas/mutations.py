@@ -276,6 +276,8 @@ class Mutation:
                 transcript=result.get("transcript"),
                 word_count=result.get("word_count"),
                 language=result.get("language"),
+                thumbnail_url=result.get("thumbnail_url"),
+                thumbnail_url_hq=result.get("thumbnail_url_hq"),
                 error=result.get("error")
             )
         except Exception as e:

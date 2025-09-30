@@ -135,4 +135,6 @@ class YouTubeTranscriptResponse:
     transcript: Optional[str] = None
     word_count: Optional[int] = None
     language: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    thumbnail_url_hq: Optional[str] = None
     error: Optional[str] = None

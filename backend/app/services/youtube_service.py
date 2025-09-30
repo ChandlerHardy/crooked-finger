@@ -2,11 +2,35 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
 import re
+import time
 from typing import Optional, Dict, List
 
 
 class YouTubeService:
     """Service for fetching YouTube video transcripts"""
+
+    # Rate limiting: Track last request time
+    _last_request_time = 0
+    _min_request_interval = 2  # Minimum seconds between requests
+
+    @staticmethod
+    def get_thumbnail_url(video_id: str, quality: str = "maxresdefault") -> str:
+        """
+        Get thumbnail URL for a YouTube video
+
+        Args:
+            video_id: YouTube video ID
+            quality: Thumbnail quality (maxresdefault, sddefault, hqdefault, mqdefault, default)
+                    - maxresdefault: 1280x720 (if available)
+                    - sddefault: 640x480
+                    - hqdefault: 480x360
+                    - mqdefault: 320x180
+                    - default: 120x90
+
+        Returns:
+            URL string for the thumbnail
+        """
+        return f"https://img.youtube.com/vi/{video_id}/{quality}.jpg"
 
     @staticmethod
     def extract_video_id(url: str) -> Optional[str]:
@@ -59,9 +83,18 @@ class YouTubeService:
             }
 
         try:
+            # Rate limiting: Add delay between requests to avoid YouTube blocks
+            current_time = time.time()
+            time_since_last_request = current_time - YouTubeService._last_request_time
+            if time_since_last_request < YouTubeService._min_request_interval:
+                time.sleep(YouTubeService._min_request_interval - time_since_last_request)
+
             # Fetch transcript using new API (v1.2.2+)
             api = YouTubeTranscriptApi()
             transcript_result = api.fetch(video_id, languages=languages)
+
+            # Update last request time
+            YouTubeService._last_request_time = time.time()
 
             # Format transcript as continuous text
             # Note: In v1.2.2+, transcript items are FetchedTranscriptSnippet objects
@@ -77,6 +110,10 @@ class YouTubeService:
                 for snippet in transcript_result
             ]
 
+            # Generate thumbnail URLs
+            thumbnail_url = YouTubeService.get_thumbnail_url(video_id, "maxresdefault")
+            thumbnail_url_hq = YouTubeService.get_thumbnail_url(video_id, "hqdefault")
+
             return {
                 "success": True,
                 "error": None,
@@ -84,7 +121,9 @@ class YouTubeService:
                 "transcript": full_text,
                 "timestamped_transcript": timestamped,
                 "language": languages[0],
-                "word_count": len(full_text.split())
+                "word_count": len(full_text.split()),
+                "thumbnail_url": thumbnail_url,
+                "thumbnail_url_hq": thumbnail_url_hq
             }
 
         except TranscriptsDisabled:
@@ -102,9 +141,18 @@ class YouTubeService:
                 "video_id": video_id
             }
         except Exception as e:
+            error_msg = str(e)
+            # Detect IP blocking errors
+            if "blocking requests" in error_msg or "IPBlocked" in error_msg:
+                return {
+                    "success": False,
+                    "error": "YouTube is temporarily blocking requests. This usually resolves itself in 15-30 minutes. Try using a different network or waiting before retrying.",
+                    "transcript": None,
+                    "video_id": video_id
+                }
             return {
                 "success": False,
-                "error": f"Error fetching transcript: {str(e)}",
+                "error": f"Error fetching transcript: {str(e)[:200]}",
                 "transcript": None,
                 "video_id": video_id
             }
