@@ -5,12 +5,14 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 export function YouTubeTest() {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [extractingPattern, setExtractingPattern] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [extractedPattern, setExtractedPattern] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFetchTranscript = async () => {
@@ -68,6 +70,67 @@ export function YouTubeTest() {
       setError(err.message || 'Network error occurred');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExtractPattern = async () => {
+    if (!result || !result.transcript) {
+      setError('Please fetch a transcript first');
+      return;
+    }
+
+    setExtractingPattern(true);
+    setError(null);
+    setExtractedPattern(null);
+
+    try {
+      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+      const response = await fetch(graphqlUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation ExtractPatternFromTranscript($transcript: String!, $videoId: String, $thumbnailUrl: String) {
+              extractPatternFromTranscript(transcript: $transcript, videoId: $videoId, thumbnailUrl: $thumbnailUrl) {
+                success
+                patternName
+                patternNotation
+                patternInstructions
+                difficultyLevel
+                materials
+                estimatedTime
+                videoId
+                thumbnailUrl
+                error
+              }
+            }
+          `,
+          variables: {
+            transcript: result.transcript,
+            videoId: result.videoId,
+            thumbnailUrl: result.thumbnailUrl,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.errors) {
+        setError(data.errors[0].message);
+      } else if (data.data?.extractPatternFromTranscript) {
+        const patternData = data.data.extractPatternFromTranscript;
+        if (patternData.success) {
+          setExtractedPattern(patternData);
+        } else {
+          setError(patternData.error || 'Failed to extract pattern');
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || 'Network error occurred');
+    } finally {
+      setExtractingPattern(false);
     }
   };
 
@@ -202,7 +265,96 @@ export function YouTubeTest() {
                     </div>
                   </CardContent>
                 </Card>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleExtractPattern}
+                    disabled={extractingPattern}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    {extractingPattern ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Extracting Pattern with AI...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5" />
+                        Extract Pattern with AI
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
+            )}
+
+            {extractedPattern && (
+              <Card className="border-primary">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    Extracted Crochet Pattern
+                  </CardTitle>
+                  <CardDescription>
+                    AI-generated pattern from video transcript
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {extractedPattern.patternName && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Pattern Name:</label>
+                      <p className="mt-1 text-lg font-semibold">{extractedPattern.patternName}</p>
+                    </div>
+                  )}
+
+                  {extractedPattern.difficultyLevel && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Difficulty:</label>
+                      <p className="mt-1 capitalize">{extractedPattern.difficultyLevel}</p>
+                    </div>
+                  )}
+
+                  {extractedPattern.materials && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Materials:</label>
+                      <p className="mt-1 text-sm">{extractedPattern.materials}</p>
+                    </div>
+                  )}
+
+                  {extractedPattern.estimatedTime && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Estimated Time:</label>
+                      <p className="mt-1 text-sm">{extractedPattern.estimatedTime}</p>
+                    </div>
+                  )}
+
+                  {extractedPattern.patternNotation && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Pattern Notation:</label>
+                      <div className="mt-1 p-3 bg-muted/50 rounded-lg">
+                        <code className="text-sm font-mono whitespace-pre-wrap">{extractedPattern.patternNotation}</code>
+                      </div>
+                    </div>
+                  )}
+
+                  {extractedPattern.patternInstructions && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Instructions:</label>
+                      <p className="mt-1 text-sm leading-relaxed whitespace-pre-wrap">{extractedPattern.patternInstructions}</p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-4 border-t">
+                    <Button variant="outline" className="flex-1">
+                      Save to Library
+                    </Button>
+                    <Button className="flex-1">
+                      Start Project
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             )}
           </CardContent>
         </Card>

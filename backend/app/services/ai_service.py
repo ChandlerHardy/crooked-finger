@@ -59,21 +59,33 @@ class AIService:
         ).first()
         return usage.request_count if usage else 0
 
-    def _increment_usage(self, db: Session, model_name: str) -> None:
-        """Increment usage count for a model today"""
+    def _increment_usage(self, db: Session, model_name: str, input_chars: int = 0, output_chars: int = 0) -> None:
+        """Increment usage count for a model today with character/token tracking"""
         today = date.today()
         usage = db.query(AIModelUsage).filter(
             AIModelUsage.model_name == model_name,
             AIModelUsage.date == today
         ).first()
 
+        # Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+        input_tokens = input_chars // 4
+        output_tokens = output_chars // 4
+
         if usage:
             usage.request_count += 1
+            usage.total_input_characters += input_chars
+            usage.total_output_characters += output_chars
+            usage.total_input_tokens += input_tokens
+            usage.total_output_tokens += output_tokens
             usage.updated_at = datetime.utcnow()
         else:
             usage = AIModelUsage(
                 model_name=model_name,
                 request_count=1,
+                total_input_characters=input_chars,
+                total_output_characters=output_chars,
+                total_input_tokens=input_tokens,
+                total_output_tokens=output_tokens,
                 date=today
             )
             db.add(usage)
@@ -146,7 +158,12 @@ class AIService:
 
             for model in GeminiModel:
                 model_name = model.value["name"]
-                current_usage = self._get_usage_for_date(db, model_name, today)
+                usage_record = db.query(AIModelUsage).filter(
+                    AIModelUsage.model_name == model_name,
+                    AIModelUsage.date == today
+                ).first()
+
+                current_usage = usage_record.request_count if usage_record else 0
                 daily_limit = model.value["daily_limit"]
 
                 stats[model_name] = {
@@ -155,7 +172,11 @@ class AIService:
                     "remaining": daily_limit - current_usage,
                     "percentage_used": round((current_usage / daily_limit) * 100, 1),
                     "priority": model.value["priority"],
-                    "use_case": model.value["use_case"]
+                    "use_case": model.value["use_case"],
+                    "total_input_characters": usage_record.total_input_characters if usage_record else 0,
+                    "total_output_characters": usage_record.total_output_characters if usage_record else 0,
+                    "total_input_tokens": usage_record.total_input_tokens if usage_record else 0,
+                    "total_output_tokens": usage_record.total_output_tokens if usage_record else 0,
                 }
 
             return stats
@@ -246,10 +267,12 @@ Provide detailed, beginner-friendly instructions."""
                 contents=combined_prompt
             )
 
-            # Track usage
+            # Track usage with character counts
             db = SessionLocal()
             try:
-                self._increment_usage(db, model_name)
+                input_chars = len(combined_prompt)
+                output_chars = len(response.text)
+                self._increment_usage(db, model_name, input_chars, output_chars)
             finally:
                 db.close()
 
@@ -310,10 +333,12 @@ Always be encouraging and provide practical, actionable advice."""
                 contents=combined_prompt
             )
 
-            # Track usage
+            # Track usage with character counts
             db = SessionLocal()
             try:
-                self._increment_usage(db, model_name)
+                input_chars = len(combined_prompt)
+                output_chars = len(response.text)
+                self._increment_usage(db, model_name, input_chars, output_chars)
             finally:
                 db.close()
 

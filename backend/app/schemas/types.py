@@ -115,6 +115,10 @@ class ModelUsageStats:
     percentage_used: float
     priority: int
     use_case: str
+    total_input_characters: int
+    total_output_characters: int
+    total_input_tokens: int
+    total_output_tokens: int
 
 @strawberry.type
 class AIUsageDashboard:
@@ -137,4 +141,17 @@ class YouTubeTranscriptResponse:
     language: Optional[str] = None
     thumbnail_url: Optional[str] = None
     thumbnail_url_hq: Optional[str] = None
+    error: Optional[str] = None
+
+@strawberry.type
+class ExtractedPattern:
+    success: bool
+    pattern_name: Optional[str] = None
+    pattern_notation: Optional[str] = None
+    pattern_instructions: Optional[str] = None
+    difficulty_level: Optional[str] = None
+    materials: Optional[str] = None
+    estimated_time: Optional[str] = None
+    video_id: Optional[str] = None
+    thumbnail_url: Optional[str] = None
     error: Optional[str] = None

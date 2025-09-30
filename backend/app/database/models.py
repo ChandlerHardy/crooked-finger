@@ -78,6 +78,10 @@ class AIModelUsage(Base):
     id = Column(Integer, primary_key=True, index=True)
     model_name = Column(String, index=True)  # gemini-2.5-pro, gemini-2.5-flash, etc.
     request_count = Column(Integer, default=0)
+    total_input_characters = Column(Integer, default=0)  # Total input characters processed
+    total_output_characters = Column(Integer, default=0)  # Total output characters generated
+    total_input_tokens = Column(Integer, default=0)  # Estimated input tokens (chars / 4)
+    total_output_tokens = Column(Integer, default=0)  # Estimated output tokens (chars / 4)
     date = Column(Date, default=date.today, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

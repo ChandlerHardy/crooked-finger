@@ -23,6 +23,10 @@ const GET_AI_USAGE_DASHBOARD = gql`
         percentageUsed
         priority
         useCase
+        totalInputCharacters
+        totalOutputCharacters
+        totalInputTokens
+        totalOutputTokens
       }
     }
   }
@@ -301,6 +305,36 @@ export default function AIUsageDashboardComponent() {
                   }
                 </span>
               </div>
+
+              {/* Character and Token Tracking */}
+              {(model.totalInputCharacters > 0 || model.totalOutputCharacters > 0) && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                      <div className="text-gray-600 dark:text-gray-400 mb-1">Input</div>
+                      <div className="font-mono font-semibold text-blue-900 dark:text-blue-100">
+                        {model.totalInputCharacters.toLocaleString()} chars
+                      </div>
+                      <div className="text-gray-500 dark:text-gray-400 text-[10px]">
+                        ~{model.totalInputTokens.toLocaleString()} tokens
+                      </div>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                      <div className="text-gray-600 dark:text-gray-400 mb-1">Output</div>
+                      <div className="font-mono font-semibold text-green-900 dark:text-green-100">
+                        {model.totalOutputCharacters.toLocaleString()} chars
+                      </div>
+                      <div className="text-gray-500 dark:text-gray-400 text-[10px]">
+                        ~{model.totalOutputTokens.toLocaleString()} tokens
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-gray-500 dark:text-gray-400 text-center">
+                    Total processed: {(model.totalInputCharacters + model.totalOutputCharacters).toLocaleString()} chars
+                    ({(model.totalInputTokens + model.totalOutputTokens).toLocaleString()} tokens)
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

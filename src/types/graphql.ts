@@ -74,6 +74,10 @@ export interface ModelUsageStats {
   percentageUsed: number;
   priority: number;
   useCase: string;
+  totalInputCharacters: number;
+  totalOutputCharacters: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
 }
 
 export interface AIUsageDashboard {

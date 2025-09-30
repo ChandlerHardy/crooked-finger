@@ -353,6 +353,13 @@ docker-compose -f docker-compose.backend.yml restart backend
    - Developed GraphQL API for usage statistics dashboard
    - Built auto-refreshing frontend dashboard with color-coded progress bars
    - Achieved 5x quota increase from 400 to 1,600 daily requests
+12. ✅ **AI Usage Tracking Enhancement** (September 2024)
+   - Added character and token count tracking for all AI requests
+   - Tracks total_input_characters, total_output_characters per model
+   - Calculates token estimates (1 token ≈ 4 characters)
+   - Enhanced dashboard UI to display input/output character and token counts
+   - Enables monitoring of YouTube transcript processing and pattern extraction
+   - Real-time visualization with color-coded boxes (blue for input, green for output)
 
 ## 🚀 Backend Successfully Deployed!
 - **Status**: ✅ Live and operational
@@ -415,6 +422,7 @@ docker-compose -f docker-compose.backend.yml restart backend
 - ✅ **Production**: PostgreSQL on OCI server for scalable production data
 - ✅ **AI Usage Tracking**: Works independently in both environments
 - 📝 **Note**: SQLAlchemy ORM ensures seamless transition between databases
+- ⚠️ **Schema Updates**: SQLite requires manual column addition via migration script; PostgreSQL handles schema changes automatically with `create_all()` on first deployment
 
 ## ✅ Latest Completed Tasks
 1. **AI Chat Integration** ✅ **COMPLETED**

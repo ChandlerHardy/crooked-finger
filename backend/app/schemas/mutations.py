@@ -6,7 +6,7 @@ from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
     User, AuthResponse, CrochetProject, ChatResponse, ResetUsageResponse,
-    YouTubeTranscriptResponse, RegisterInput, LoginInput, CreateProjectInput
+    YouTubeTranscriptResponse, ExtractedPattern, RegisterInput, LoginInput, CreateProjectInput
 )
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
@@ -286,6 +286,81 @@ class Mutation:
                 error=f"Unexpected error: {str(e)}"
             )
 
+    @strawberry.field
+    async def extract_pattern_from_transcript(
+        self,
+        transcript: str,
+        video_id: Optional[str] = None,
+        thumbnail_url: Optional[str] = None
+    ) -> ExtractedPattern:
+        """Extract crochet pattern from YouTube video transcript using AI"""
+        try:
+            # Use AI to extract pattern information from transcript
+            # Gemini 2.5 Flash has 1M token context, so we can use most of the transcript
+            # Limit to ~100k characters (~25k tokens) to be safe
+            prompt = f"""Analyze this YouTube video transcript and extract a crochet pattern if present.
+
+Transcript:
+{transcript[:100000]}
+
+Please extract and format:
+1. Pattern Name: A descriptive name for the pattern
+2. Pattern Notation: The abbreviated crochet notation (e.g., "ch 4, 12 dc in ring, sl st")
+3. Pattern Instructions: Step-by-step instructions in plain English
+4. Difficulty Level: beginner, intermediate, or advanced
+5. Materials: What yarn weight, hook size, etc. are mentioned
+6. Estimated Time: If mentioned, how long to complete
+
+If no clear pattern is found, return null for pattern fields and explain what was found instead.
+
+Format your response as:
+NAME: [pattern name]
+NOTATION: [abbreviated notation]
+INSTRUCTIONS: [detailed instructions]
+DIFFICULTY: [level]
+MATERIALS: [materials list]
+TIME: [estimated time]
+"""
+
+            # Get AI response
+            ai_response = await ai_service.chat_about_pattern(
+                message=prompt,
+                project_context="",
+                chat_history=""
+            )
+
+            # Parse the AI response
+            pattern_data = _parse_pattern_response(ai_response)
+
+            if pattern_data:
+                return ExtractedPattern(
+                    success=True,
+                    pattern_name=pattern_data.get("name"),
+                    pattern_notation=pattern_data.get("notation"),
+                    pattern_instructions=pattern_data.get("instructions"),
+                    difficulty_level=pattern_data.get("difficulty"),
+                    materials=pattern_data.get("materials"),
+                    estimated_time=pattern_data.get("time"),
+                    video_id=video_id,
+                    thumbnail_url=thumbnail_url,
+                    error=None
+                )
+            else:
+                return ExtractedPattern(
+                    success=False,
+                    error="Could not extract a clear crochet pattern from the transcript",
+                    video_id=video_id,
+                    thumbnail_url=thumbnail_url
+                )
+
+        except Exception as e:
+            return ExtractedPattern(
+                success=False,
+                error=f"Error extracting pattern: {str(e)}",
+                video_id=video_id,
+                thumbnail_url=thumbnail_url
+            )
+
 async def _chat_with_diagram_generation(message: str, context: Optional[str], chat_history: str = "") -> str:
     """Handle chat requests that include diagram generation"""
     try:
@@ -443,3 +518,42 @@ def store_chat_message(db: Session, user_message: str, ai_response: str, user_id
 
     db.add(chat_message)
     db.commit()
+
+
+def _parse_pattern_response(ai_response: str) -> Optional[dict]:
+    """Parse AI response for pattern extraction"""
+    try:
+        pattern_data = {}
+
+        # Extract fields using regex
+        name_match = re.search(r'NAME:\s*(.+?)(?:\n|$)', ai_response, re.IGNORECASE)
+        notation_match = re.search(r'NOTATION:\s*(.+?)(?=\nINSTRUCTIONS:|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        instructions_match = re.search(r'INSTRUCTIONS:\s*(.+?)(?=\nDIFFICULTY:|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        difficulty_match = re.search(r'DIFFICULTY:\s*(.+?)(?:\n|$)', ai_response, re.IGNORECASE)
+        materials_match = re.search(r'MATERIALS:\s*(.+?)(?=\nTIME:|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        time_match = re.search(r'TIME:\s*(.+?)(?:\n|$)', ai_response, re.IGNORECASE)
+
+        if name_match:
+            pattern_data["name"] = name_match.group(1).strip()
+        if notation_match:
+            pattern_data["notation"] = notation_match.group(1).strip()
+        if instructions_match:
+            pattern_data["instructions"] = instructions_match.group(1).strip()
+        if difficulty_match:
+            difficulty = difficulty_match.group(1).strip().lower()
+            # Validate difficulty
+            if difficulty in ['beginner', 'intermediate', 'advanced']:
+                pattern_data["difficulty"] = difficulty
+        if materials_match:
+            pattern_data["materials"] = materials_match.group(1).strip()
+        if time_match:
+            pattern_data["time"] = time_match.group(1).strip()
+
+        # Return pattern data if at least name and notation are found
+        if pattern_data.get("name") and pattern_data.get("notation"):
+            return pattern_data
+
+        return None
+
+    except Exception:
+        return None

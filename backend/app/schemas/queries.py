@@ -106,7 +106,11 @@ class Query:
                 remaining=data["remaining"],
                 percentage_used=data["percentage_used"],
                 priority=data["priority"],
-                use_case=data["use_case"]
+                use_case=data["use_case"],
+                total_input_characters=data["total_input_characters"],
+                total_output_characters=data["total_output_characters"],
+                total_input_tokens=data["total_input_tokens"],
+                total_output_tokens=data["total_output_tokens"]
             ))
             total_requests += data["current_usage"]
             total_remaining += data["remaining"]
