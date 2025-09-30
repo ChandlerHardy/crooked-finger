@@ -24,6 +24,7 @@ reportlab==4.0.7
 # Crochet Pattern Processing
 regex==2023.10.3
 beautifulsoup4==4.12.2
+youtube-transcript-api==1.2.2
 
 # Development
 pytest==7.4.3

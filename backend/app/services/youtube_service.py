@@ -1,0 +1,161 @@
+"""YouTube transcript fetching service"""
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
+import re
+from typing import Optional, Dict, List
+
+
+class YouTubeService:
+    """Service for fetching YouTube video transcripts"""
+
+    @staticmethod
+    def extract_video_id(url: str) -> Optional[str]:
+        """
+        Extract video ID from various YouTube URL formats
+        Supports:
+        - https://www.youtube.com/watch?v=VIDEO_ID
+        - https://youtu.be/VIDEO_ID
+        - https://www.youtube.com/embed/VIDEO_ID
+        """
+        patterns = [
+            r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})',
+            r'youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})',
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+
+        # If it's already just an ID (11 characters)
+        if re.match(r'^[a-zA-Z0-9_-]{11}$', url):
+            return url
+
+        return None
+
+    @staticmethod
+    def get_transcript(video_url: str, languages: List[str] = None) -> Dict[str, any]:
+        """
+        Fetch transcript for a YouTube video
+
+        Args:
+            video_url: YouTube video URL or video ID
+            languages: List of language codes to try (default: ['en'])
+
+        Returns:
+            Dictionary with transcript data and metadata
+        """
+        if languages is None:
+            languages = ['en']
+
+        # Extract video ID from URL
+        video_id = YouTubeService.extract_video_id(video_url)
+        if not video_id:
+            return {
+                "success": False,
+                "error": "Invalid YouTube URL or video ID",
+                "transcript": None,
+                "video_id": None
+            }
+
+        try:
+            # Fetch transcript using new API (v1.2.2+)
+            api = YouTubeTranscriptApi()
+            transcript_result = api.fetch(video_id, languages=languages)
+
+            # Format transcript as continuous text
+            # Note: In v1.2.2+, transcript items are FetchedTranscriptSnippet objects
+            full_text = " ".join([snippet.text for snippet in transcript_result])
+
+            # Also provide timestamped version
+            timestamped = [
+                {
+                    "text": snippet.text,
+                    "start": snippet.start,
+                    "duration": snippet.duration
+                }
+                for snippet in transcript_result
+            ]
+
+            return {
+                "success": True,
+                "error": None,
+                "video_id": video_id,
+                "transcript": full_text,
+                "timestamped_transcript": timestamped,
+                "language": languages[0],
+                "word_count": len(full_text.split())
+            }
+
+        except TranscriptsDisabled:
+            return {
+                "success": False,
+                "error": "Transcripts are disabled for this video",
+                "transcript": None,
+                "video_id": video_id
+            }
+        except NoTranscriptFound:
+            return {
+                "success": False,
+                "error": f"No transcript found in languages: {', '.join(languages)}",
+                "transcript": None,
+                "video_id": video_id
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error fetching transcript: {str(e)}",
+                "transcript": None,
+                "video_id": video_id
+            }
+
+    @staticmethod
+    def list_available_transcripts(video_url: str) -> Dict[str, any]:
+        """
+        List all available transcripts for a video
+
+        Args:
+            video_url: YouTube video URL or video ID
+
+        Returns:
+            Dictionary with available transcript languages
+        """
+        video_id = YouTubeService.extract_video_id(video_url)
+        if not video_id:
+            return {
+                "success": False,
+                "error": "Invalid YouTube URL or video ID",
+                "transcripts": []
+            }
+
+        try:
+            # List transcripts using new API (v1.2.2+)
+            api = YouTubeTranscriptApi()
+            transcript_list = api.list(video_id)
+
+            available = []
+            for transcript in transcript_list:
+                available.append({
+                    "language": transcript.language,
+                    "language_code": transcript.language_code,
+                    "is_generated": transcript.is_generated,
+                    "is_translatable": transcript.is_translatable
+                })
+
+            return {
+                "success": True,
+                "error": None,
+                "video_id": video_id,
+                "transcripts": available
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Error listing transcripts: {str(e)}",
+                "transcripts": []
+            }
+
+
+# Create singleton instance
+youtube_service = YouTubeService()

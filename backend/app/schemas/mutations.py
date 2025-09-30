@@ -6,7 +6,7 @@ from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
     User, AuthResponse, CrochetProject, ChatResponse, ResetUsageResponse,
-    RegisterInput, LoginInput, CreateProjectInput
+    YouTubeTranscriptResponse, RegisterInput, LoginInput, CreateProjectInput
 )
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
@@ -18,6 +18,7 @@ from app.services.granny_square_service import granny_square_service
 from app.services.flowing_granny_service import flowing_granny_service
 from app.services.matplotlib_crochet_service import matplotlib_crochet_service
 from app.services.rag_service import rag_service
+from app.services.youtube_service import youtube_service
 import re
 from sqlalchemy.orm import Session
 
@@ -258,6 +259,29 @@ class Mutation:
                 success=False,
                 message=f"Failed to reset usage: {str(e)}",
                 reset_date=None
+            )
+
+    @strawberry.field
+    async def fetch_youtube_transcript(
+        self,
+        video_url: str,
+        languages: Optional[list[str]] = None
+    ) -> YouTubeTranscriptResponse:
+        """Fetch transcript from a YouTube video"""
+        try:
+            result = youtube_service.get_transcript(video_url, languages)
+            return YouTubeTranscriptResponse(
+                success=result["success"],
+                video_id=result.get("video_id"),
+                transcript=result.get("transcript"),
+                word_count=result.get("word_count"),
+                language=result.get("language"),
+                error=result.get("error")
+            )
+        except Exception as e:
+            return YouTubeTranscriptResponse(
+                success=False,
+                error=f"Unexpected error: {str(e)}"
             )
 
 async def _chat_with_diagram_generation(message: str, context: Optional[str], chat_history: str = "") -> str:

@@ -127,3 +127,12 @@ class ResetUsageResponse:
     success: bool
     message: str
     reset_date: Optional[str] = None
+
+@strawberry.type
+class YouTubeTranscriptResponse:
+    success: bool
+    video_id: Optional[str] = None
+    transcript: Optional[str] = None
+    word_count: Optional[int] = None
+    language: Optional[str] = None
+    error: Optional[str] = None

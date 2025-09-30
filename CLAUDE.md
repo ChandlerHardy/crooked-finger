@@ -56,8 +56,12 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
    - Authentic crochet symbols (double crochet with crossbars, chain ovals)
    - Square-framework based granny squares matching published patterns
    - Intelligent pattern detection for diagram requests
-4. **Project Management**: Save and track crochet projects
-5. **Chat History**: Store conversations for reference
+4. **YouTube Transcript Extraction**: ✅ **NEW** - Extract patterns from crochet tutorial videos
+   - Fetch transcripts from YouTube videos with captions
+   - Support for auto-generated and manual captions
+   - Extract patterns from video tutorials for AI analysis
+5. **Project Management**: Save and track crochet projects
+6. **Chat History**: Store conversations for reference
 
 ## 📁 Essential Architecture Files (from CryptAssist)
 Based on the architecture-examples review, these are the core files needed:
@@ -80,12 +84,13 @@ backend/
 │   │   ├── queries.py         # GraphQL queries
 │   │   └── mutations.py       # GraphQL mutations
 │   ├── services/
-│   │   ├── ai_service.py                    # AI integration (Llama/Claude)
+│   │   ├── ai_service.py                    # AI integration (Multi-model Gemini)
 │   │   ├── pattern_service.py               # Pattern parsing & diagram generation
 │   │   ├── matplotlib_crochet_service.py    # ✅ ENHANCED Professional chart generation
 │   │   ├── granny_square_service.py         # Specialized granny square charts (SVG)
 │   │   ├── flowing_granny_service.py        # Flowing granny square variants
-│   │   └── rag_service.py                   # Crochet chart knowledge enhancement
+│   │   ├── rag_service.py                   # Crochet chart knowledge enhancement
+│   │   └── youtube_service.py               # ✅ NEW YouTube transcript extraction
 │   ├── utils/
 │   │   └── auth.py            # JWT authentication
 │   └── requirements.txt
@@ -136,6 +141,11 @@ curl http://150.136.38.166:8001/crooked-finger/health
 curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
   -H "Content-Type: application/json" \
   -d '{"query":"query { aiUsageDashboard { totalRequestsToday totalRemaining models { modelName currentUsage dailyLimit remaining percentageUsed priority useCase } } }"}'
+
+# Test YouTube transcript fetching (NEW)
+curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { fetchYoutubeTranscript(videoUrl: \"dQw4w9WgXcQ\") { success videoId wordCount language error transcript } }"}'
 
 # View backend logs
 cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
@@ -433,6 +443,16 @@ docker-compose -f docker-compose.backend.yml restart backend
    - ✅ **Reset Verification**: Confirmed reset clears all model usage and restores full quota (1600 requests total)
    - ✅ **Backend Integration**: Added `reset_daily_usage()` method to AI service with proper database cleanup
    - ✅ **Reset Response Tracking**: Added ResetUsageResponse type with success confirmation and reset date
+
+4. **YouTube Transcript Extraction** ✅ **COMPLETED (September 2025)**
+   - ✅ **Library Integration**: Installed and configured `youtube-transcript-api` v1.2.2
+   - ✅ **Backend Service**: Created `youtube_service.py` with transcript fetching and URL parsing
+   - ✅ **GraphQL Mutation**: Added `fetchYoutubeTranscript` mutation with full error handling
+   - ✅ **Frontend Test Interface**: Built dedicated YouTube Test tab for transcript validation
+   - ✅ **Multiple URL Formats**: Support for `youtube.com/watch?v=`, `youtu.be/`, and video IDs
+   - ✅ **Caption Support**: Works with auto-generated and manual captions
+   - ✅ **API Upgrade**: Updated from v0.6.2 to v1.2.2 to fix YouTube API compatibility
+   - ✅ **Production Ready**: Tested with real videos (487 words fetched successfully)
 
 ## 🚧 Remaining Tasks
 

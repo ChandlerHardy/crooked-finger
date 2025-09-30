@@ -9,6 +9,7 @@ import { ProjectsPage } from '../components/ProjectsPage';
 import { ProjectDetailPage } from '../components/ProjectDetailPage';
 import { PatternLibrary } from '../components/PatternLibrary';
 import AIUsageDashboardComponent from '../components/AIUsageDashboard';
+import { YouTubeTest } from '../components/YouTubeTest';
 import { CHAT_WITH_ASSISTANT } from '../lib/graphql/mutations';
 import { ChatWithAssistantVariables, ChatWithAssistantResponse } from '../types/graphql';
 
@@ -287,6 +288,8 @@ Make 2.`,
         );
       case 'patterns':
         return <PatternLibrary />;
+      case 'youtube-test':
+        return <YouTubeTest />;
       case 'usage':
         return (
           <div className="h-full overflow-auto p-6">
