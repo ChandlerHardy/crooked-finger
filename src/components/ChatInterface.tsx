@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Send, Sparkles, FileText, MessageCircle } from 'lucide-react';
+import { Send, Sparkles, FileText, MessageCircle, Image as ImageIcon, X, Paperclip } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
@@ -26,19 +26,81 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ chatHistory, onSendMessage, loading = false, hideHeader = false }: ChatInterfaceProps) {
   const [message, setMessage] = useState('');
+  const [pastedImages, setPastedImages] = useState<string[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatHistory]);
 
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    const newImages: string[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.indexOf('image') !== -1) {
+        e.preventDefault();
+        const blob = item.getAsFile();
+        if (blob) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (event.target?.result) {
+              newImages.push(event.target.result as string);
+              setPastedImages(prev => [...prev, event.target!.result as string]);
+            }
+          };
+          reader.readAsDataURL(blob);
+        }
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setPastedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file) => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (event.target?.result) {
+              setPastedImages(prev => [...prev, event.target!.result as string]);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+    // Reset file input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAttachClick = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim()) {
-      onSendMessage(message);
+    if (message.trim() || pastedImages.length > 0) {
+      // For now, just send the text message
+      // TODO: Backend integration for image support
+      let fullMessage = message;
+      if (pastedImages.length > 0) {
+        fullMessage += `\n\n[${pastedImages.length} image(s) attached - Image support coming soon!]`;
+      }
+      onSendMessage(fullMessage);
       setMessage('');
+      setPastedImages([]);
     }
   };
 
@@ -59,7 +121,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, hid
       )}
 
       <ScrollArea className="flex-1 p-6 overflow-auto" ref={scrollAreaRef}>
-        <div className="space-y-4 max-w-4xl min-h-full">
+        <div className="space-y-4 max-w-4xl mx-auto min-h-full">
           {chatHistory.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -226,23 +288,85 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, hid
       </ScrollArea>
 
       <div className="border-t border-border p-6 bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-sm">
-        <form onSubmit={handleSubmit} className="flex gap-3 items-end">
-          <Textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Paste your crochet pattern or ask a question..."
-            className="flex-1 rounded-2xl border-primary/30 focus:border-primary/50 bg-input-background/80 text-foreground placeholder:text-muted-foreground min-h-[44px] max-h-32 resize-none"
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
           />
-          <Button type="submit" disabled={!message.trim() || loading} className="rounded-2xl px-6">
-            <Send className="h-4 w-4" />
-          </Button>
+          
+          {/* Attached Images Preview */}
+          {pastedImages.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {pastedImages.map((image, index) => (
+                <div key={index} className="relative group">
+                  <img 
+                    src={image} 
+                    alt={`Attached ${index + 1}`} 
+                    className="h-20 w-20 object-cover rounded-xl border-2 border-primary/30"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex gap-3 items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={handleAttachClick}
+              disabled={loading}
+              className="rounded-2xl border-primary/30 hover:border-primary/50 hover:bg-primary/10 flex-shrink-0"
+              title="Attach images"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <div className="flex-1 relative">
+              <Textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onPaste={handlePaste}
+                placeholder="Type a message, paste or attach images..."
+                className="rounded-2xl border-primary/30 focus:border-primary/50 bg-input-background/80 text-foreground placeholder:text-muted-foreground min-h-[44px] max-h-32 resize-none pr-10 !field-sizing-auto"
+                style={{ 
+                  wordBreak: 'break-word', 
+                  whiteSpace: 'pre-wrap', 
+                  overflowWrap: 'anywhere',
+                  overflow: 'hidden'
+                }}
+                wrap="soft"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
+              />
+              {pastedImages.length > 0 && (
+                <div className="absolute right-3 top-3 flex items-center gap-1 text-xs text-primary">
+                  <ImageIcon className="h-3 w-3" />
+                  <span>{pastedImages.length}</span>
+                </div>
+              )}
+            </div>
+            <Button type="submit" disabled={(!message.trim() && pastedImages.length === 0) || loading} className="rounded-2xl px-6 flex-shrink-0">
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
         </form>
       </div>
     </div>

@@ -1,0 +1,23 @@
+services:
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: crooked-finger-dev-db
+    environment:
+      POSTGRES_DB: crooked_finger_dev
+      POSTGRES_USER: crochet_dev_user
+      POSTGRES_PASSWORD: crochet_dev_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5434:5432"  # Port 5434 on host to avoid conflicts with other PostgreSQL instances
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crochet_dev_user -d crooked_finger_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+    driver: local

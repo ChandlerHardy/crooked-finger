@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 // import { useMutation } from '@apollo/client/react/index.js';
 import { Navigation } from '../components/Navigation';
 import { HomePage } from '../components/HomePage';
@@ -36,10 +36,63 @@ interface ChatMessage {
   diagramPng?: string;
 }
 
+interface SavedPattern {
+  id: string;
+  name: string;
+  description?: string;
+  difficulty?: 'beginner' | 'intermediate' | 'advanced';
+  category?: string;
+  tags?: string[];
+  notation: string;
+  instructions?: string;
+  materials?: string;
+  estimatedTime?: string;
+  videoId?: string;
+  thumbnailUrl?: string;
+  images?: string[];
+  isFavorite: boolean;
+  views: number;
+  downloads: number;
+  createdAt: Date;
+}
+
 export default function Home() {
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
+  const [savedPatterns, setSavedPatterns] = useState<SavedPattern[]>([]);
+
+  // Load saved patterns from localStorage on mount
+  useEffect(() => {
+    const loadSavedPatterns = () => {
+      try {
+        const stored = localStorage.getItem('crooked-finger-patterns');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          // Convert date strings back to Date objects
+          const patternsWithDates = parsed.map((p: any) => ({
+            ...p,
+            createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
+          }));
+          setSavedPatterns(patternsWithDates);
+        }
+      } catch (error) {
+        console.error('Error loading saved patterns:', error);
+      }
+    };
+    loadSavedPatterns();
+  }, []);
+
+  // Save patterns to localStorage whenever they change
+  useEffect(() => {
+    if (savedPatterns.length > 0) {
+      try {
+        localStorage.setItem('crooked-finger-patterns', JSON.stringify(savedPatterns));
+      } catch (error) {
+        console.error('Error saving patterns:', error);
+      }
+    }
+  }, [savedPatterns]);
   // const [chatWithAssistant, { loading: chatLoading }] = useMutation<
   //   ChatWithAssistantResponse,
   //   ChatWithAssistantVariables
@@ -237,11 +290,53 @@ Make 2.`,
   };
 
   const handleUpdateProject = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => p.id === updatedProject.id ? updatedProject : p));
+    setProjects(prevProjects =>
+      prevProjects.map(p => p.id === updatedProject.id ? updatedProject : p)
+    );
     setSelectedProject(updatedProject);
   };
 
-  const handleBackToProjects = () => {
+  const handleSavePattern = (patternData: any) => {
+    // Check if it's a Pattern object (from manual creation) or pattern data (from YouTube)
+    if (patternData.id && patternData.notation) {
+      // Already a Pattern object from manual creation
+      setSavedPatterns(prev => [patternData, ...prev]);
+      return;
+    }
+
+    // YouTube pattern data - transform it
+    const newPattern: SavedPattern = {
+      id: Date.now().toString(),
+      name: patternData.patternName || 'Untitled Pattern',
+      description: patternData.description || '',
+      difficulty: patternData.difficultyLevel || 'beginner',
+      category: 'youtube-import',
+      tags: patternData.videoId ? ['youtube', 'imported'] : ['imported'],
+      notation: patternData.patternNotation || '',
+      instructions: patternData.patternInstructions || '',
+      materials: patternData.materials || '',
+      estimatedTime: patternData.estimatedTime || '',
+      videoId: patternData.videoId,
+      thumbnailUrl: patternData.thumbnailUrl, // YouTube thumbnail will be used as pattern thumbnail
+      images: patternData.thumbnailUrl ? [patternData.thumbnailUrl] : [], // Also add to gallery
+      isFavorite: false,
+      views: 0,
+      downloads: 0,
+      createdAt: new Date(),
+    };
+    setSavedPatterns(prev => [newPattern, ...prev]);
+    setCurrentPage('patterns');
+  };
+
+  const handleDeletePattern = (patternId: string) => {
+    setSavedPatterns(prev => prev.filter(p => p.id !== patternId));
+  };
+
+  const handleUpdatePattern = (updatedPattern: SavedPattern) => {
+    setSavedPatterns(prev =>
+      prev.map(p => p.id === updatedPattern.id ? updatedPattern : p)
+    );
+  };  const handleBackToProjects = () => {
     setSelectedProject(null);
     setCurrentPage('projects');
   };
@@ -287,9 +382,16 @@ Make 2.`,
           />
         );
       case 'patterns':
-        return <PatternLibrary />;
+        return (
+          <PatternLibrary
+            savedPatterns={savedPatterns}
+            onSavePattern={handleSavePattern}
+            onDeletePattern={handleDeletePattern}
+            onUpdatePattern={handleUpdatePattern}
+          />
+        );
       case 'youtube-test':
-        return <YouTubeTest />;
+        return <YouTubeTest onNavigate={setCurrentPage} onSavePattern={handleSavePattern} />;
       case 'usage':
         return (
           <div className="h-full overflow-auto p-6">

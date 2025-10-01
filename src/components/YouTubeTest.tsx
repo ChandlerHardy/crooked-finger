@@ -7,7 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Alert, AlertDescription } from './ui/alert';
 import { Loader2, Sparkles } from 'lucide-react';
 
-export function YouTubeTest() {
+interface YouTubeTestProps {
+  onNavigate?: (page: string) => void;
+  onSavePattern?: (patternData: any) => void;
+}
+
+export function YouTubeTest({ onNavigate, onSavePattern }: YouTubeTestProps = {}) {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [extractingPattern, setExtractingPattern] = useState(false);
@@ -346,32 +351,27 @@ export function YouTubeTest() {
                   )}
 
                   <div className="flex gap-2 pt-4 border-t">
-                    <Button variant="outline" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={() => {
+                        if (extractedPattern && onSavePattern) {
+                          onSavePattern(extractedPattern);
+                        }
+                      }}
+                    >
                       Save to Library
                     </Button>
-                    <Button className="flex-1">
+                    <Button 
+                      className="flex-1"
+                      onClick={() => onNavigate?.('projects')}
+                    >
                       Start Project
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Example Crochet Tutorial URLs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <p className="text-muted-foreground">Try these popular crochet tutorials:</p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Search YouTube for "crochet granny square tutorial"</li>
-                <li>Look for videos with closed captions enabled</li>
-                <li>Note: Not all videos have transcripts available</li>
-              </ul>
-            </div>
           </CardContent>
         </Card>
       </div>

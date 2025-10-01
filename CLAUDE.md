@@ -111,6 +111,35 @@ backend/
 6. **Backend deploy**: Run `./deploy/deploy-backend-to-oci.sh 150.136.38.166`
 
 ## 🛠️ Common Commands
+
+### Local Development Database (PostgreSQL in Docker)
+```bash
+# Start PostgreSQL development database
+docker-compose -f docker-compose.dev.yml up -d
+
+# Stop PostgreSQL (keeps data)
+docker-compose -f docker-compose.dev.yml down
+
+# Stop and delete all data (fresh start)
+docker-compose -f docker-compose.dev.yml down -v
+
+# Check database status
+docker-compose -f docker-compose.dev.yml ps
+
+# View PostgreSQL logs
+docker-compose -f docker-compose.dev.yml logs -f postgres-dev
+
+# Connect to PostgreSQL CLI
+docker exec -it crooked-finger-dev-db psql -U crochet_dev_user -d crooked_finger_dev
+
+# View tables
+docker exec crooked-finger-dev-db psql -U crochet_dev_user -d crooked_finger_dev -c "\dt"
+
+# View ai_model_usage schema
+docker exec crooked-finger-dev-db psql -U crochet_dev_user -d crooked_finger_dev -c "\d ai_model_usage"
+```
+
+### Production Server
 ```bash
 # SSH to server
 ssh ubuntu@150.136.38.166 -i /Users/chandlerhardy/.ssh/ampere.key
@@ -417,12 +446,18 @@ docker-compose -f docker-compose.backend.yml restart backend
 - ✅ Backend dev server: http://localhost:8000 (FastAPI + auto-reload)
 - ✅ Production backend: http://150.136.38.166:8001 (OCI deployment active)
 
-**Database Configuration**: ✅ **STANDARD DEV/PROD SETUP**
-- ✅ **Local Development**: SQLite (`crooked_finger.db`) for fast local testing
+**Database Configuration**: ✅ **POSTGRESQL DEV & PROD**
+- ✅ **Local Development**: PostgreSQL in Docker (`docker-compose.dev.yml`)
+  - Database: `crooked_finger_dev` on port 5434
+  - User: `crochet_dev_user` / Password: `crochet_dev_password`
+  - Start: `docker-compose -f docker-compose.dev.yml up -d`
+  - Stop: `docker-compose -f docker-compose.dev.yml down`
+  - Reset: `docker-compose -f docker-compose.dev.yml down -v` (deletes all data)
 - ✅ **Production**: PostgreSQL on OCI server for scalable production data
-- ✅ **AI Usage Tracking**: Works independently in both environments
-- 📝 **Note**: SQLAlchemy ORM ensures seamless transition between databases
-- ⚠️ **Schema Updates**: SQLite requires manual column addition via migration script; PostgreSQL handles schema changes automatically with `create_all()` on first deployment
+- ✅ **AI Usage Tracking**: Works identically in both environments
+- ✅ **Production Parity**: Development environment matches production exactly
+- ✅ **Schema Updates**: PostgreSQL auto-updates with `create_all()`, no manual migrations needed
+- 📝 **Migration Script**: `backend/migrate_add_tracking.py` kept for reference (SQLite legacy)
 
 ## ✅ Latest Completed Tasks
 1. **AI Chat Integration** ✅ **COMPLETED**
@@ -464,6 +499,23 @@ docker-compose -f docker-compose.backend.yml restart backend
    - ✅ **Rate Limiting Protection**: 2-second delays between requests to avoid YouTube IP blocks
    - ✅ **IP Block Detection**: User-friendly error messages when YouTube blocks requests
    - ✅ **Production Ready**: Tested with real videos (487 words fetched successfully)
+
+5. **Pattern Library Enhancements** ✅ **COMPLETED (October 2025)**
+   - ✅ **YouTube Pattern Import**: Patterns from YouTube transcripts save to library with thumbnails
+   - ✅ **localStorage Persistence**: Patterns persist across page refreshes (PostgreSQL integration pending)
+   - ✅ **Pattern Detail Page**: Full detail view with metadata, notation, instructions, materials
+   - ✅ **Manual Pattern Creation**: "New Pattern" dialog with all fields (name, description, difficulty, category, tags, notation, instructions, materials, estimated time, thumbnail)
+   - ✅ **Pattern Deletion**: Delete confirmation dialog for both library cards and detail page
+   - ✅ **Thumbnail Management**: 120x120px thumbnails on pattern cards with upload capability
+   - ✅ **Image Gallery**: Multi-image gallery on pattern detail page with upload/delete/set-thumbnail
+   - ✅ **Layout Fixes**: Truncated notation display, fixed scrolling, proper responsive grid
+   - ✅ **Auto-Thumbnail**: YouTube video thumbnails automatically set as pattern thumbnail
+   - ⚠️ **Known Issue - Lightbox**: Pattern detail image lightbox not opening (click events register but modal doesn't display)
+     - Attempted fixes: Moved Lightbox outside conditional, added pointer-events handling, tried conditional rendering
+     - Console shows click events fire correctly (`Image clicked, index: 0`)
+     - Issue may be related to yet-another-react-lightbox library state management with Next.js
+     - **Workaround**: Users can still view full images by right-click → "Open Image in New Tab"
+     - **TODO**: Investigate alternative lightbox libraries or custom modal implementation
 
 ## 🚧 Remaining Tasks
 

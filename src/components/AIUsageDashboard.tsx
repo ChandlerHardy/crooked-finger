@@ -284,13 +284,6 @@ export default function AIUsageDashboardComponent() {
               <Progress
                 value={model.percentageUsed}
                 className="h-2"
-                indicatorClassName={
-                  model.percentageUsed >= 90
-                    ? 'bg-red-500'
-                    : model.percentageUsed >= 70
-                    ? 'bg-yellow-500'
-                    : 'bg-green-500'
-                }
               />
 
               <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">

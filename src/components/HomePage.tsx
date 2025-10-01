@@ -74,14 +74,6 @@ export function HomePage({ recentProjects, recentChats, onNavigate }: HomePagePr
   return (
     <div className="h-full overflow-auto">
       <div className="p-6">
-        {/* Welcome Section */}
-        <div className="mb-8 bg-gradient-to-r from-primary/15 to-primary/5 rounded-3xl p-6 border border-primary/20">
-          <h1 className="text-2xl font-medium mb-2 text-primary-foreground">Welcome back! 🧶</h1>
-          <p className="text-primary-foreground/80 leading-relaxed">
-            Ready to continue your crochet journey? Here's what's happening with your cozy projects.
-          </p>
-        </div>
-
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat) => (

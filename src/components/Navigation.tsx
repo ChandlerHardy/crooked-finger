@@ -1,6 +1,7 @@
 import { Home, MessageCircle, FolderOpen, BookOpen, Settings, Activity, Youtube } from 'lucide-react';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ThemeToggle';
+import Image from 'next/image';
 
 interface NavigationProps {
   currentPage: string;
@@ -20,21 +21,18 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
 
   return (
     <div className="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col shadow-sm">
-      <div className="p-6 border-b border-sidebar-border">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center">
-              <span className="text-primary-foreground font-medium">🧶</span>
-            </div>
-            <h1 className="text-xl font-medium text-sidebar-foreground">Crooked Finger</h1>
-          </div>
-          <ThemeToggle />
-        </div>
-        <p className="text-sm text-muted-foreground">Your cozy pattern assistant</p>
+      <div className="w-64 h-64 border-b border-sidebar-border flex items-center justify-center">
+        <Image 
+          src="/CFC-logo-2.png" 
+          alt="Crooked Finger Crochet" 
+          width={240} 
+          height={240}
+          className="rounded-xl"
+        />
       </div>
       
-      <nav className="flex-1 p-4">
-        <ul className="space-y-3">
+      <nav className="flex-1 p-4 flex flex-col">
+        <ul className="space-y-3 flex-1">
           {navigationItems.map((item) => (
             <li key={item.id}>
               <Button
@@ -52,6 +50,9 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
             </li>
           ))}
         </ul>
+        <div className="mt-4 flex justify-center">
+          <ThemeToggle />
+        </div>
       </nav>
       
       <div className="p-4 border-t border-sidebar-border">
