@@ -23,7 +23,7 @@ export function Navigation({ currentPage, onPageChange }: NavigationProps) {
     <div className="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col shadow-sm">
       <div className="w-64 h-64 border-b border-sidebar-border flex items-center justify-center">
         <Image 
-          src="/CFC-logo-2.png" 
+          src="/CFC-logo-3.png" 
           alt="Crooked Finger Crochet" 
           width={240} 
           height={240}

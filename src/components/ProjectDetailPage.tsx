@@ -75,34 +75,41 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
     }
   };
 
-  // Handle mouse wheel zoom - improved version
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  // Add wheel event listener with passive: false to allow preventDefault
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-    const zoomSpeed = 0.1;
-    const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
-    const newScale = Math.max(0.5, Math.min(5, scale + delta));
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    if (containerRef.current && imageRef.current) {
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const imageRect = imageRef.current.getBoundingClientRect();
+      const zoomSpeed = 0.1;
+      const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+      const newScale = Math.max(0.5, Math.min(5, scale + delta));
 
-      // Mouse position relative to the image center
-      const mouseX = e.clientX - (imageRect.left + imageRect.width / 2);
-      const mouseY = e.clientY - (imageRect.top + imageRect.height / 2);
+      if (imageRef.current) {
+        const imageRect = imageRef.current.getBoundingClientRect();
 
-      // Calculate how much to adjust position to zoom toward mouse
-      const scaleChange = newScale / scale - 1;
+        // Mouse position relative to the image center
+        const mouseX = e.clientX - (imageRect.left + imageRect.width / 2);
+        const mouseY = e.clientY - (imageRect.top + imageRect.height / 2);
 
-      setPosition(prev => ({
-        x: prev.x - mouseX * scaleChange,
-        y: prev.y - mouseY * scaleChange
-      }));
-    }
+        // Calculate how much to adjust position to zoom toward mouse
+        const scaleChange = newScale / scale - 1;
 
-    setScale(newScale);
-  };
+        setPosition(prev => ({
+          x: prev.x - mouseX * scaleChange,
+          y: prev.y - mouseY * scaleChange
+        }));
+      }
+
+      setScale(newScale);
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [scale, position]);
 
   // Handle mouse drag pan
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -141,7 +148,6 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
       <div
         ref={containerRef}
         className="relative w-full h-full flex items-center justify-center overflow-hidden"
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -274,9 +280,9 @@ export function ProjectDetailPage({ project, onBack, onUpdateProject }: ProjectD
     try {
       const savedImages = localStorage.getItem(`project-images-${project.id}`);
       if (savedImages) {
-        const parsed = JSON.parse(savedImages);
+        const parsed = JSON.parse(savedImages) as Array<Omit<ProjectImage, 'uploadedAt'> & { uploadedAt: string }>;
         // Convert date strings back to Date objects
-        return parsed.map((img: any) => ({
+        return parsed.map((img) => ({
           ...img,
           uploadedAt: new Date(img.uploadedAt)
         }));
@@ -304,8 +310,19 @@ export function ProjectDetailPage({ project, onBack, onUpdateProject }: ProjectD
     ];
   });
 
+  // Chat message type for project chat
+  interface ChatMessage {
+    id: string;
+    type: 'user' | 'assistant';
+    content: string;
+    timestamp: Date;
+    isPattern?: boolean;
+    diagramSvg?: string;
+    diagramPng?: string;
+  }
+
   // Project-specific chat history starts empty
-  const [projectChatHistory, setProjectChatHistory] = useState([]);
+  const [projectChatHistory, setProjectChatHistory] = useState<ChatMessage[]>([]);
 
   // Save images to localStorage whenever images change
   React.useEffect(() => {

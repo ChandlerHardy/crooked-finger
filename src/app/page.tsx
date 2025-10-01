@@ -10,8 +10,6 @@ import { ProjectDetailPage } from '../components/ProjectDetailPage';
 import { PatternLibrary } from '../components/PatternLibrary';
 import AIUsageDashboardComponent from '../components/AIUsageDashboard';
 import { YouTubeTest } from '../components/YouTubeTest';
-import { CHAT_WITH_ASSISTANT } from '../lib/graphql/mutations';
-import { ChatWithAssistantVariables, ChatWithAssistantResponse } from '../types/graphql';
 
 interface Project {
   id: string;
@@ -53,7 +51,7 @@ interface SavedPattern {
   isFavorite: boolean;
   views: number;
   downloads: number;
-  createdAt: Date;
+  createdAt?: Date;
 }
 
 export default function Home() {
@@ -68,9 +66,9 @@ export default function Home() {
       try {
         const stored = localStorage.getItem('crooked-finger-patterns');
         if (stored) {
-          const parsed = JSON.parse(stored);
+          const parsed = JSON.parse(stored) as SavedPattern[];
           // Convert date strings back to Date objects
-          const patternsWithDates = parsed.map((p: any) => ({
+          const patternsWithDates = parsed.map((p) => ({
             ...p,
             createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
           }));
@@ -296,20 +294,27 @@ Make 2.`,
     setSelectedProject(updatedProject);
   };
 
-  const handleSavePattern = (patternData: any) => {
+  const handleSavePattern = (patternData: Partial<SavedPattern> & { patternName?: string; patternNotation?: string; patternInstructions?: string; difficultyLevel?: string }) => {
     // Check if it's a Pattern object (from manual creation) or pattern data (from YouTube)
     if (patternData.id && patternData.notation) {
-      // Already a Pattern object from manual creation
-      setSavedPatterns(prev => [patternData, ...prev]);
+      // Already a Pattern object from manual creation - cast it properly
+      const fullPattern = patternData as SavedPattern;
+      setSavedPatterns(prev => [fullPattern, ...prev]);
       return;
     }
 
     // YouTube pattern data - transform it
+    const difficultyValue = patternData.difficultyLevel;
+    const validDifficulty: 'beginner' | 'intermediate' | 'advanced' = 
+      (difficultyValue === 'beginner' || difficultyValue === 'intermediate' || difficultyValue === 'advanced') 
+        ? difficultyValue 
+        : 'beginner';
+
     const newPattern: SavedPattern = {
       id: Date.now().toString(),
       name: patternData.patternName || 'Untitled Pattern',
       description: patternData.description || '',
-      difficulty: patternData.difficultyLevel || 'beginner',
+      difficulty: validDifficulty,
       category: 'youtube-import',
       tags: patternData.videoId ? ['youtube', 'imported'] : ['imported'],
       notation: patternData.patternNotation || '',

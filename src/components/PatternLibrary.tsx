@@ -1,8 +1,6 @@
-import { useState, useRef } from 'react';
+/* eslint-disable @next/next/no-img-element */
+import { useState, useRef, useEffect } from 'react';
 import { Search, BookOpen, Download, Heart, Eye, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
-import Lightbox from 'yet-another-react-lightbox';
-import Zoom from 'yet-another-react-lightbox/plugins/zoom';
-import 'yet-another-react-lightbox/styles.css';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
@@ -46,6 +44,185 @@ interface PatternLibraryProps {
   onSavePattern?: (pattern: Pattern) => void;
   onDeletePattern?: (patternId: string) => void;
   onUpdatePattern?: (pattern: Pattern) => void;
+}
+
+interface ViewerImage {
+  id: string;
+  url: string;
+  caption: string;
+  uploadedAt: Date;
+  type: 'progress' | 'chart' | 'reference';
+}
+
+// Enhanced Image Viewer Component
+interface EnhancedImageViewerProps {
+  images: ViewerImage[];
+  currentIndex: number;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+}
+
+function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: EnhancedImageViewerProps) {
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  }, [currentIndex]);
+
+  useEffect(() => {
+    // Disable body scroll when lightbox is open
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  // Add wheel event listener with passive: false to allow preventDefault
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const zoomSpeed = 0.1;
+      const delta = e.deltaY > 0 ? -zoomSpeed : zoomSpeed;
+      const newScale = Math.max(0.5, Math.min(5, scale + delta));
+
+      // Get mouse position relative to the container
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left - rect.width / 2;
+      const mouseY = e.clientY - rect.top - rect.height / 2;
+
+      // Calculate zoom to cursor
+      const scaleRatio = newScale / scale - 1;
+      const newPositionX = position.x - mouseX * scaleRatio;
+      const newPositionY = position.y - mouseY * scaleRatio;
+
+      setPosition({ x: newPositionX, y: newPositionY });
+      setScale(newScale);
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [scale, position]);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+    }
+  };
+
+  const handleMouseUp = () => setIsDragging(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') onNavigate(currentIndex > 0 ? currentIndex - 1 : images.length - 1);
+      if (e.key === 'ArrowRight') onNavigate(currentIndex < images.length - 1 ? currentIndex + 1 : 0);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, images.length, onClose, onNavigate]);
+
+  const handleDoubleClick = () => {
+    if (scale === 1) {
+      setScale(2);
+    } else {
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    }
+  };
+
+  const handleResetZoom = () => {
+    setScale(1);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  return (
+    <div className="absolute inset-0 bg-black bg-opacity-90 z-50">
+      <div
+        ref={containerRef}
+        className="relative w-full h-full flex items-center justify-center overflow-hidden"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{ cursor: isDragging ? 'grabbing' : (scale === 1 ? 'default' : 'grab') }}
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 text-white hover:text-gray-300 text-2xl bg-black bg-opacity-50 rounded-full w-10 h-10 flex items-center justify-center"
+          aria-label="Close viewer"
+        >
+          ×
+        </button>
+
+        {/* Navigation buttons */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={() => onNavigate(currentIndex > 0 ? currentIndex - 1 : images.length - 1)}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 text-3xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center z-10"
+              aria-label="Previous image"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => onNavigate(currentIndex < images.length - 1 ? currentIndex + 1 : 0)}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white hover:text-gray-300 text-3xl bg-black bg-opacity-50 rounded-full w-12 h-12 flex items-center justify-center z-10"
+              aria-label="Next image"
+            >
+              ›
+            </button>
+          </>
+        )}
+
+        {/* Zoom Reset Button */}
+        {scale !== 1 && (
+          <button
+            onClick={handleResetZoom}
+            className="absolute top-4 left-4 z-10 text-white hover:text-gray-300 text-sm bg-black bg-opacity-50 rounded px-3 py-1"
+          >
+            Reset Zoom
+          </button>
+        )}
+
+        {/* Zoom level indicator */}
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 text-white text-sm bg-black bg-opacity-50 rounded px-3 py-1">
+          {Math.round(scale * 100)}%
+        </div>
+
+        {/* Image counter */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white text-sm bg-black/50 px-3 py-1 rounded z-10">
+          {currentIndex + 1} / {images.length}
+        </div>
+
+        {/* Image */}
+        <img
+          src={images[currentIndex]?.url}
+          alt={images[currentIndex]?.caption}
+          className="max-w-[90vw] max-h-[90vh] object-contain select-none"
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+          }}
+          draggable={false}
+          onDoubleClick={handleDoubleClick}
+        />
+      </div>
+    </div>
+  );
 }
 
 const mockPatterns: Pattern[] = [
@@ -97,7 +274,8 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
   const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null);
   const [showNewPatternDialog, setShowNewPatternDialog] = useState(false);
   const [patternToDelete, setPatternToDelete] = useState<Pattern | null>(null);
-  const [selectedImageIndex, setSelectedImageIndex] = useState<number>(-1);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [newPattern, setNewPattern] = useState({
     name: '',
     description: '',
@@ -262,10 +440,15 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
     }
   };
 
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
   // If a pattern is selected, show detail view
   if (selectedPattern) {
     return (
-      <div className="h-full flex flex-col overflow-hidden">
+      <div className="h-full flex flex-col overflow-hidden relative">
         <div className="border-b border-border p-6">
           <Button
             variant="ghost"
@@ -321,10 +504,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                           src={image}
                           alt={`Pattern image ${index + 1}`}
                           className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                          onClick={() => {
-                            console.log('Image clicked, index:', index);
-                            setSelectedImageIndex(index);
-                          }}
+                          onClick={() => openLightbox(index)}
                         />
                         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                           <Button
@@ -455,6 +635,22 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
           </div>
         </div>
+
+        {/* Image Lightbox for detail view */}
+        {lightboxOpen && selectedPattern.images && selectedPattern.images.length > 0 && (
+          <EnhancedImageViewer
+            images={selectedPattern.images.map((img, i) => ({
+              id: i.toString(),
+              url: img,
+              caption: `Image ${i + 1} of ${selectedPattern.name}`,
+              uploadedAt: new Date(),
+              type: 'reference' as const,
+            }))}
+            currentIndex={lightboxIndex}
+            onClose={() => setLightboxOpen(false)}
+            onNavigate={setLightboxIndex}
+          />
+        )}
       </div>
     );
   }
@@ -791,25 +987,6 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Image Lightbox - moved outside conditional */}
-      {selectedPattern && selectedImageIndex >= 0 && (
-        <Lightbox
-          open={true}
-          close={() => {
-            console.log('Lightbox closing');
-            setSelectedImageIndex(-1);
-          }}
-          index={selectedImageIndex}
-          slides={selectedPattern.images?.map((image) => ({ src: image })) || []}
-          plugins={[Zoom]}
-          zoom={{
-            maxZoomPixelRatio: 5,
-            zoomInMultiplier: 2,
-            scrollToZoom: true,
-          }}
-        />
-      )}
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!patternToDelete} onOpenChange={() => setPatternToDelete(null)}>

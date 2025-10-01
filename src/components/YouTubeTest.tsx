@@ -1,4 +1,5 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState } from 'react';
 import { Button } from './ui/button';
@@ -203,6 +204,7 @@ export function YouTubeTest({ onNavigate, onSavePattern }: YouTubeTestProps = {}
                       <CardTitle className="text-sm">Video Thumbnail</CardTitle>
                     </CardHeader>
                     <CardContent>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={result.thumbnailUrl}
                         alt={`Thumbnail for video ${result.videoId}`}

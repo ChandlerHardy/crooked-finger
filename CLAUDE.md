@@ -265,8 +265,8 @@ docker-compose -f docker-compose.backend.yml restart backend
 3. **Improved Symbol Quality**: Double crochet symbols with proper crossbar placement
 4. **Pattern Detection Fix**: Correctly routes general granny square requests to traditional chart generation
 
-## 🖼️ Professional Image Viewer (September 2025)
-**Enhanced Project Image Management**: ✅ **COMPLETED** - Professional image viewer with zoom, pan, and persistence
+## 🖼️ Professional Image Viewer (October 2025)
+**Enhanced Project & Pattern Image Management**: ✅ **COMPLETED** - Professional image viewer with zoom, pan, and persistence
 
 ### Key Features
 **🔍 Professional Zoom & Pan Controls**:
@@ -274,6 +274,7 @@ docker-compose -f docker-compose.backend.yml restart backend
 - **Click & Drag Panning**: Natural drag-to-pan at any zoom level
 - **Smart Cursor States**: Default cursor at 100%, grab/grabbing when panning
 - **Double-Click Zoom**: Quick 2x zoom toggle
+- **Reset Zoom Button**: Appears when zoomed, returns to 100%
 - **Keyboard Navigation**: ESC to close, arrows for gallery navigation
 
 **🎯 Intelligent Image Sizing**:
@@ -291,6 +292,7 @@ docker-compose -f docker-compose.backend.yml restart backend
 **🖥️ Contained Layout**:
 - **Tab-Specific Overlay**: Image viewer only covers Images tab area (not full screen)
 - **Professional UI**: Zoom level indicator, reset button, navigation controls
+- **Container-Scoped Background**: Dark overlay only covers detail view, not entire page
 - **Help Text**: Shows available controls and keyboard shortcuts
 
 ### Technical Implementation
@@ -298,13 +300,24 @@ docker-compose -f docker-compose.backend.yml restart backend
 - **FileReader API**: Converts uploaded files to base64 data URLs
 - **localStorage**: JSON serialization with Date object handling
 - **Transform-based Zoom**: CSS transforms for smooth scaling and positioning
+- **Native Event Listeners**: Wheel events with `{ passive: false }` to prevent scroll interference
+- **Relative Positioning**: Container-scoped absolute positioning for tab-specific overlays
 - **Event Handling**: Mouse wheel, drag, keyboard, and resize events
 
 ### User Experience
-- **Intuitive Controls**: Mouse wheel zoom, click-drag pan, keyboard shortcuts
-- **Visual Feedback**: Live zoom percentage, proper cursor states
-- **Gallery Navigation**: Seamless browsing between multiple project images
+- **Intuitive Controls**: Mouse wheel zoom, click-drag pan, keyboard shortcuts, double-click zoom
+- **Visual Feedback**: Live zoom percentage, reset button, proper cursor states
+- **Gallery Navigation**: Seamless browsing between multiple project/pattern images
 - **Persistent State**: Uploaded images remain available across sessions
+- **Dual Implementation**: Identical lightbox experience in both Projects and Pattern Library
+
+### Latest Fixes (October 2025)
+- ✅ **Fixed zoom-to-cursor**: Properly calculates mouse position for accurate zoom targeting
+- ✅ **Eliminated passive event warnings**: Native wheel event listeners with `{ passive: false }`
+- ✅ **Container-scoped overlay**: Changed from `fixed` to `absolute` positioning with `relative` parent
+- ✅ **Added reset zoom button**: Appears when zoomed (scale !== 1) for quick return to 100%
+- ✅ **Double-click zoom toggle**: Quick 1x/2x zoom switching on image double-click
+- ✅ **Unified implementation**: Pattern Library lightbox matches Project Detail Page exactly
 
 ## 🤖 AI Integration - Google AI Studio (Gemini)
 **Current Architecture: Multi-Model Smart Routing System** ⭐ **FULLY OPERATIONAL**

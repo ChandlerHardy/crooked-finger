@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -223,8 +225,11 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, hid
                               // Extract text from pre block (usually contains a code element)
                               const extractText = (children: React.ReactNode): string => {
                                 if (typeof children === 'string') return children;
-                                if (React.isValidElement(children) && children.props?.children) {
-                                  return extractText(children.props.children);
+                                if (React.isValidElement(children)) {
+                                  const childProps = children.props as { children?: React.ReactNode };
+                                  if (childProps.children) {
+                                    return extractText(childProps.children);
+                                  }
                                 }
                                 return String(children || '');
                               };
