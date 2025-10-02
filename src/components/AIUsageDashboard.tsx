@@ -69,7 +69,8 @@ const formatModelName = (modelName: string) => {
 };
 
 export default function AIUsageDashboardComponent() {
-  const [timeUntilReset, setTimeUntilReset] = useState('');
+  const [timeUntilReset, setTimeUntilReset] = useState('--h --m --s');
+  const [mounted, setMounted] = useState(false);
 
   const { data, loading, error, refetch } = useQuery<GetAIUsageDashboardResponse>(
     GET_AI_USAGE_DASHBOARD,
@@ -78,6 +79,11 @@ export default function AIUsageDashboardComponent() {
       errorPolicy: 'all'
     }
   );
+
+  // Mark as mounted for hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Calculate time until quota reset (midnight PST)
   useEffect(() => {
@@ -243,7 +249,7 @@ export default function AIUsageDashboardComponent() {
             All model quotas reset at midnight PST/PDT (Pacific Time)
           </p>
           <div className="text-lg font-mono font-bold text-orange-900 dark:text-orange-100">
-            Next reset in: {timeUntilReset}
+            Next reset in: {mounted ? timeUntilReset : '--h --m --s'}
           </div>
         </div>
 
