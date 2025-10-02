@@ -6,7 +6,8 @@ from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
     User, AuthResponse, CrochetProject, ChatResponse, ResetUsageResponse,
-    YouTubeTranscriptResponse, ExtractedPattern, RegisterInput, LoginInput, CreateProjectInput
+    YouTubeTranscriptResponse, ExtractedPattern, RegisterInput, LoginInput,
+    CreateProjectInput, UpdateProjectInput
 )
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
@@ -153,6 +154,97 @@ class Mutation:
                 created_at=db_project.created_at,
                 updated_at=db_project.updated_at
             )
+        finally:
+            db.close()
+
+    @strawberry.field
+    async def update_project(
+        self,
+        info: Info,
+        project_id: int,
+        input: UpdateProjectInput
+    ) -> CrochetProject:
+        """Update an existing crochet project"""
+        user = info.context.get("user")
+        if not user:
+            raise Exception("Authentication required")
+
+        db = next(get_db())
+        try:
+            db_project = db.query(models.CrochetProject).filter(
+                models.CrochetProject.id == project_id,
+                models.CrochetProject.user_id == user.id
+            ).first()
+
+            if not db_project:
+                raise Exception("Project not found")
+
+            # Update fields if provided
+            if input.name is not None:
+                db_project.name = input.name
+            if input.pattern_text is not None:
+                db_project.pattern_text = input.pattern_text
+            if input.translated_text is not None:
+                db_project.translated_text = input.translated_text
+            if input.difficulty_level is not None:
+                db_project.difficulty_level = input.difficulty_level
+            if input.estimated_time is not None:
+                db_project.estimated_time = input.estimated_time
+            if input.yarn_weight is not None:
+                db_project.yarn_weight = input.yarn_weight
+            if input.hook_size is not None:
+                db_project.hook_size = input.hook_size
+            if input.notes is not None:
+                db_project.notes = input.notes
+            if input.is_completed is not None:
+                db_project.is_completed = input.is_completed
+
+            db_project.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(db_project)
+
+            return CrochetProject(
+                id=db_project.id,
+                name=db_project.name,
+                pattern_text=db_project.pattern_text,
+                translated_text=db_project.translated_text,
+                difficulty_level=db_project.difficulty_level,
+                estimated_time=db_project.estimated_time,
+                yarn_weight=db_project.yarn_weight,
+                hook_size=db_project.hook_size,
+                notes=db_project.notes,
+                is_completed=db_project.is_completed,
+                user_id=db_project.user_id,
+                created_at=db_project.created_at,
+                updated_at=db_project.updated_at
+            )
+        finally:
+            db.close()
+
+    @strawberry.field
+    async def delete_project(
+        self,
+        info: Info,
+        project_id: int
+    ) -> bool:
+        """Delete a crochet project"""
+        user = info.context.get("user")
+        if not user:
+            raise Exception("Authentication required")
+
+        db = next(get_db())
+        try:
+            db_project = db.query(models.CrochetProject).filter(
+                models.CrochetProject.id == project_id,
+                models.CrochetProject.user_id == user.id
+            ).first()
+
+            if not db_project:
+                raise Exception("Project not found")
+
+            db.delete(db_project)
+            db.commit()
+            return True
         finally:
             db.close()
 

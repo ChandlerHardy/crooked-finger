@@ -89,6 +89,46 @@ class Query:
             db.close()
 
     @strawberry.field
+    def chat_messages(
+        self,
+        info: Info,
+        project_id: Optional[int] = None,
+        limit: int = 100
+    ) -> List[ChatMessage]:
+        """Get chat messages, optionally filtered by project"""
+        user = info.context.get("user")
+        if not user:
+            return []
+
+        db = next(get_db())
+        try:
+            query = db.query(models.ChatMessage).filter(
+                models.ChatMessage.user_id == user.id
+            )
+
+            if project_id:
+                query = query.filter(models.ChatMessage.project_id == project_id)
+
+            chat_messages = query.order_by(
+                models.ChatMessage.created_at.desc()
+            ).limit(limit).all()
+
+            return [
+                ChatMessage(
+                    id=msg.id,
+                    message=msg.message,
+                    response=msg.response,
+                    message_type=msg.message_type,
+                    project_id=msg.project_id,
+                    user_id=msg.user_id,
+                    created_at=msg.created_at
+                )
+                for msg in chat_messages
+            ]
+        finally:
+            db.close()
+
+    @strawberry.field
     def ai_usage_dashboard(self) -> AIUsageDashboard:
         """Get AI model usage statistics dashboard"""
         stats = ai_service.get_usage_stats()

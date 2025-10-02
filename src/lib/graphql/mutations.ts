@@ -11,31 +11,43 @@ export const CREATE_PROJECT = gql`
     createProject(input: $input) {
       id
       name
-      description
-      pattern
-      status
-      difficulty
-      tags
+      patternText
+      translatedText
+      difficultyLevel
+      estimatedTime
+      yarnWeight
+      hookSize
+      notes
+      isCompleted
+      userId
       createdAt
       updatedAt
-      isFavorite
     }
   }
 `;
 
 export const UPDATE_PROJECT = gql`
-  mutation UpdateProject($id: ID!, $input: UpdateProjectInput!) {
-    updateProject(id: $id, input: $input) {
+  mutation UpdateProject($projectId: Int!, $input: UpdateProjectInput!) {
+    updateProject(projectId: $projectId, input: $input) {
       id
       name
-      description
-      pattern
-      status
-      difficulty
-      tags
+      patternText
+      translatedText
+      difficultyLevel
+      estimatedTime
+      yarnWeight
+      hookSize
+      notes
+      isCompleted
+      userId
       createdAt
       updatedAt
-      isFavorite
     }
+  }
+`;
+
+export const DELETE_PROJECT = gql`
+  mutation DeleteProject($projectId: Int!) {
+    deleteProject(projectId: $projectId)
   }
 `;

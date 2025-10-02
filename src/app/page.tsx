@@ -354,6 +354,7 @@ Make 2.`,
             recentProjects={projects.slice(0, 3)}
             recentChats={chatHistory.slice(-3)}
             onNavigate={setCurrentPage}
+            onProjectClick={handleProjectClick}
           />
         );
       case 'chat':
@@ -418,6 +419,7 @@ Make 2.`,
             recentProjects={projects.slice(0, 3)}
             recentChats={chatHistory.slice(-3)}
             onNavigate={setCurrentPage}
+            onProjectClick={handleProjectClick}
           />
         );
     }

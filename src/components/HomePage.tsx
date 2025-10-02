@@ -28,9 +28,10 @@ interface HomePageProps {
   recentProjects: Project[];
   recentChats: ChatMessage[];
   onNavigate: (page: string) => void;
+  onProjectClick?: (project: Project) => void;
 }
 
-export function HomePage({ recentProjects, recentChats, onNavigate }: HomePageProps) {
+export function HomePage({ recentProjects, recentChats, onNavigate, onProjectClick }: HomePageProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'planning': return 'bg-blue-100 text-blue-800';
@@ -123,7 +124,11 @@ export function HomePage({ recentProjects, recentChats, onNavigate }: HomePagePr
               ) : (
                 <div className="space-y-4">
                   {recentProjects.slice(0, 3).map((project) => (
-                    <div key={project.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-2xl hover:from-muted/50 hover:to-muted/20 transition-all duration-200 cursor-pointer border border-border/30">
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between p-4 bg-gradient-to-r from-muted/30 to-muted/10 rounded-2xl hover:from-muted/50 hover:to-muted/20 transition-all duration-200 cursor-pointer border border-border/30"
+                      onClick={() => onProjectClick?.(project)}
+                    >
                       <div className="flex-1">
                         <h4 className="font-medium">{project.name}</h4>
                         <p className="text-sm text-muted-foreground line-clamp-1">

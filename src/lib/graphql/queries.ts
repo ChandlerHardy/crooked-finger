@@ -5,31 +5,51 @@ export const GET_PROJECTS = gql`
     projects {
       id
       name
-      description
-      pattern
-      status
-      difficulty
-      tags
+      patternText
+      translatedText
+      difficultyLevel
+      estimatedTime
+      yarnWeight
+      hookSize
+      notes
+      isCompleted
+      userId
       createdAt
       updatedAt
-      isFavorite
     }
   }
 `;
 
 export const GET_PROJECT = gql`
-  query GetProject($id: ID!) {
-    project(id: $id) {
+  query GetProject($projectId: Int!) {
+    project(projectId: $projectId) {
       id
       name
-      description
-      pattern
-      status
-      difficulty
-      tags
+      patternText
+      translatedText
+      difficultyLevel
+      estimatedTime
+      yarnWeight
+      hookSize
+      notes
+      isCompleted
+      userId
       createdAt
       updatedAt
-      isFavorite
+    }
+  }
+`;
+
+export const GET_CHAT_MESSAGES = gql`
+  query GetChatMessages($projectId: Int, $limit: Int) {
+    chatMessages(projectId: $projectId, limit: $limit) {
+      id
+      message
+      response
+      messageType
+      projectId
+      userId
+      createdAt
     }
   }
 `;
