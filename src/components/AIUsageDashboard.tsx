@@ -99,9 +99,14 @@ export default function AIUsageDashboardComponent() {
       const timezoneOffset = isDST ? pdtOffset : pstOffset;
 
       // Get next midnight PST/PDT
+      // Midnight PST is 8 hours ahead of UTC (or 7 for PDT)
       const nextMidnightPST = new Date();
-      nextMidnightPST.setUTCDate(now.getUTCDate() + 1);
-      nextMidnightPST.setUTCHours(-timezoneOffset, 0, 0, 0); // Convert PST/PDT to UTC
+      nextMidnightPST.setUTCHours(-timezoneOffset, 0, 0, 0); // Today's midnight PST in UTC
+
+      // If we've already passed today's midnight PST, move to tomorrow
+      if (now >= nextMidnightPST) {
+        nextMidnightPST.setUTCDate(nextMidnightPST.getUTCDate() + 1);
+      }
 
       const timeDiff = nextMidnightPST.getTime() - now.getTime();
 
