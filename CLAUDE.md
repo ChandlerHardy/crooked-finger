@@ -49,36 +49,48 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 6. **Project Management**: Track crochet projects with images, notes, and chat history
 7. **Professional Image Viewer**: Zoom, pan, and navigate project/pattern images
 
-## 📁 Key Architecture Files
+## 📁 Project Structure
 ```
-backend/
-├── app/
-│   ├── main.py                           # FastAPI entry point
-│   ├── core/config.py                    # Environment configuration
-│   ├── database/models.py                # User, Project, Chat models
-│   ├── schemas/
-│   │   ├── queries.py                    # GraphQL queries
-│   │   └── mutations.py                  # GraphQL mutations
-│   ├── services/
-│   │   ├── ai_service.py                 # Multi-model Gemini integration
-│   │   ├── pattern_service.py            # Pattern parsing & diagram generation
-│   │   ├── matplotlib_crochet_service.py # Professional chart generation
-│   │   ├── granny_square_service.py      # Granny square charts (SVG)
-│   │   └── youtube_service.py            # YouTube transcript extraction
-│   └── utils/auth.py                     # JWT authentication
-
-frontend/
-├── src/
-│   ├── app/page.tsx                      # Main application
-│   ├── components/
-│   │   ├── Navigation.tsx                # Sidebar navigation
-│   │   ├── ChatInterface.tsx             # AI chat interface
-│   │   ├── PatternLibrary.tsx            # Pattern browsing & management
-│   │   ├── ProjectDetailPage.tsx         # Project management with image viewer
-│   │   └── YouTubeTest.tsx               # YouTube transcript testing
-│   └── lib/
-│       ├── apollo-client.ts              # GraphQL client
-│       └── graphql/mutations.ts          # GraphQL mutations
+crooked-finger/
+├── backend/                              # FastAPI + GraphQL backend
+│   ├── app/
+│   │   ├── main.py                       # FastAPI entry point
+│   │   ├── core/config.py                # Environment configuration (.env loading)
+│   │   ├── database/models.py            # User, Project, Chat models
+│   │   ├── schemas/
+│   │   │   ├── queries.py                # GraphQL queries
+│   │   │   └── mutations.py              # GraphQL mutations
+│   │   ├── services/
+│   │   │   ├── ai_service.py             # Multi-model Gemini integration
+│   │   │   ├── pattern_service.py        # Pattern parsing & diagram generation
+│   │   │   ├── matplotlib_crochet_service.py # Professional chart generation
+│   │   │   ├── granny_square_service.py  # Granny square charts (SVG)
+│   │   │   └── youtube_service.py        # YouTube transcript extraction
+│   │   └── utils/auth.py                 # JWT authentication
+│   ├── .env                              # Local development environment variables
+│   └── requirements.txt
+│
+├── frontend/                             # Next.js web application
+│   ├── src/
+│   │   ├── app/page.tsx                  # Main application
+│   │   ├── components/
+│   │   │   ├── Navigation.tsx            # Sidebar navigation
+│   │   │   ├── ChatInterface.tsx         # AI chat interface
+│   │   │   ├── PatternLibrary.tsx        # Pattern browsing & management
+│   │   │   ├── ProjectDetailPage.tsx     # Project management with image viewer
+│   │   │   └── YouTubeTest.tsx           # YouTube transcript testing
+│   │   └── lib/
+│   │       ├── apollo-client.ts          # GraphQL client
+│   │       └── graphql/mutations.ts      # GraphQL mutations
+│   ├── .env.local                        # Local frontend environment variables
+│   ├── package.json
+│   └── next.config.ts
+│
+├── vercel.json                           # Vercel deployment configuration
+├── deploy-backend-to-oci.sh             # Backend deployment script
+├── docker-compose.backend.yml           # Production backend containers
+├── docker-compose.dev.yml               # Local development database
+└── CLAUDE.md                            # This file
 ```
 
 ## 🛠️ Common Commands
@@ -267,12 +279,24 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 4. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
 
 ## 🔄 Development Workflow
-1. **Make changes** locally in frontend/ or backend/
-2. **Test locally**: `npm run dev` (frontend) or `uvicorn app.main:app --reload` (backend)
-3. **Build test**: `npm run build` to check for TypeScript errors
-4. **Commit & push** to main branch
-5. **Frontend auto-deploys** via Vercel
-6. **Backend deploy**: Run `./deploy/deploy-backend-to-oci.sh 150.136.38.166`
+1. **Make changes** locally in `frontend/` or `backend/` directories
+2. **Test locally**:
+   - Frontend: `cd frontend && npm run dev` (runs on http://localhost:3000)
+   - Backend: `cd backend && uvicorn app.main:app --reload --port 8001` (runs on http://localhost:8001)
+3. **Build test**: `cd frontend && npm run build` to check for TypeScript errors
+4. **Commit & push** to `main` branch
+5. **Frontend auto-deploys** via Vercel (triggered by push to `main`)
+6. **Backend deploy**: Run `./deploy-backend-to-oci.sh 150.136.38.166`
+
+## 🏗️ Project Structure Notes
+- **Monorepo-style**: Frontend and backend are separate subdirectories
+- **Independent deployments**: Frontend (Vercel) and backend (OCI) deploy separately
+- **Shared API**: Both web and iOS (future) will use the same GraphQL backend
+- **Git branch**: `main` is the production branch (Vercel deploys from `main`)
+- **Environment files**:
+  - `backend/.env` - Local backend config (not committed)
+  - `frontend/.env.local` - Local frontend config (not committed)
+  - Production env vars set in Vercel dashboard and OCI server
 
 ## 🔒 SSL/HTTPS Configuration
 **Status**: ✅ **FULLY OPERATIONAL**
