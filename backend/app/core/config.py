@@ -1,5 +1,7 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
+from pathlib import Path
 
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./crooked_finger.db"
@@ -19,7 +21,8 @@ class Settings(BaseSettings):
     admin_secret: str = "local-admin-secret"
 
     class Config:
-        env_file = "../.env"
+        # Find .env file relative to this config.py file
+        env_file = str(Path(__file__).parent.parent.parent / ".env")
         extra = "ignore"
         case_sensitive = False  # Allow CORS_ORIGINS to map to cors_origins
 

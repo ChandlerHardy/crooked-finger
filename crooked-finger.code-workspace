@@ -1,0 +1,29 @@
+{
+  "folders": [
+    {
+      "name": "crooked-finger",
+      "path": "."
+    },
+    {
+      "name": "crooked-finger-ios",
+      "path": "../crooked-finger-ios"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "typescript.preferences.includePackageJsonAutoImports": "auto"
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-vscode.vscode-json",
+      "ms-vscode.vscode-xml",
+      "bradlc.vscode-tailwindcss",
+      "ms-python.python",
+      "ms-python.pylint",
+      "ms-python.flake8",
+      "ms-python.black-formatter",
+      "ms-toolsai.jupyter",
+      "swiftlang.swift"
+    ]
+  }
+}
