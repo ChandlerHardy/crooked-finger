@@ -21,25 +21,24 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 **Crooked-Finger uses:** Port 8001 (Backend API), 5433 (PostgreSQL), 6380 (Redis)
 
 ## 🚀 Live Production URLs
-- **Main App**: TBD (likely crooked-finger.chandlerhardy.com)
-- **Backend API**: http://150.136.38.166:8001
-- **GraphQL**: http://150.136.38.166:8001/crooked-finger/graphql
-- **Health Check**: http://150.136.38.166:8001/crooked-finger/health
+- **Main App**: https://crookedfinger.chandlerhardy.com
+- **Backend API**: https://backend.chandlerhardy.com
+- **GraphQL**: https://backend.chandlerhardy.com/crooked-finger/graphql
+- **Health Check**: https://backend.chandlerhardy.com/crooked-finger/health
 
 ## ⚙️ Key Environment Variables
 **Backend (.env on OCI server):**
-- `GEMINI_API_KEY=***` (Google AI Studio API key)
-- `CORS_ORIGINS=https://crooked-finger-app.vercel.app,https://backend.chandlerhardy.com`
+- `GEMINI_API_KEY=AIzaSyDlKJxbfq93MThxC_CGUdZChDmaZPZ4vpg` (Google AI Studio API key)
+- `CORS_ORIGINS=https://crookedfinger.chandlerhardy.com,https://crooked-finger-app.vercel.app,https://backend.chandlerhardy.com,http://localhost:3000,http://localhost:3001`
 - `ADMIN_SECRET=change-this-in-production`
 - `DATABASE_URL=postgresql://crochet_user:crochet_password@postgres:5432/crooked_finger_db`
 
-**Frontend (.env):**
-- `NEXT_PUBLIC_GRAPHQL_URL=http://150.136.38.166:8001/crooked-finger/graphql`
-- `NEXT_PUBLIC_API_URL=http://localhost:3000`
-- `NEXT_PUBLIC_BACKEND_URL=http://150.136.38.166:8001`
+**Frontend (.env.local):**
+- `NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8001/crooked-finger/graphql`
+- `GEMINI_API_KEY=AIzaSyDlKJxbfq93MThxC_CGUdZChDmaZPZ4vpg`
 
 **Frontend (Vercel):**
-- `NEXT_PUBLIC_GRAPHQL_URL=https://backend.chandlerhardy.com:8001/crooked-finger/graphql`
+- `NEXT_PUBLIC_GRAPHQL_URL=https://backend.chandlerhardy.com/crooked-finger/graphql`
 
 ## Core Features
 1. **Pattern Translation**: Convert crochet notation to readable instructions
@@ -114,17 +113,17 @@ cd crooked-finger && docker-compose -f docker-compose.backend.yml restart backen
 ./deploy-backend-to-oci.sh 150.136.38.166
 
 # Test GraphQL chatWithAssistant mutation
-curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
+curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
   -H "Content-Type: application/json" \
   -d '{"query":"mutation { chatWithAssistant(message: \"What does sc2tog mean?\") }"}'
 
 # Test AI usage dashboard
-curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
+curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
   -H "Content-Type: application/json" \
   -d '{"query":"query { aiUsageDashboard { totalRequestsToday totalRemaining models { modelName currentUsage dailyLimit remaining percentageUsed } } }"}'
 
 # Test YouTube transcript fetching
-curl -X POST "http://150.136.38.166:8001/crooked-finger/graphql" \
+curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
   -H "Content-Type: application/json" \
   -d '{"query":"mutation { fetchYoutubeTranscript(videoUrl: \"dQw4w9WgXcQ\") { success videoId wordCount language error transcript } }"}'
 
@@ -141,18 +140,33 @@ cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
 ```bash
 ssh ubuntu@150.136.38.166 -i /Users/chandlerhardy/.ssh/ampere.key
 cd crooked-finger
-# Add your development URL to CORS_ORIGINS:
-CORS_ORIGINS=https://crooked-finger-app.vercel.app,http://localhost:3000,http://localhost:3001
-docker-compose -f docker-compose.backend.yml restart backend
+# Edit .env and update CORS_ORIGINS, then:
+docker-compose -f docker-compose.backend.yml down
+docker-compose -f docker-compose.backend.yml --env-file .env up -d
 ```
+
+**Note**: The backend config uses `case_sensitive = False` to properly read `CORS_ORIGINS` from environment.
 
 ### AI Service Not Working
 **Symptoms**: "AI service not configured" or Gemini API errors
 
+**Root Cause**: GEMINI_API_KEY must be explicitly added to docker-compose.backend.yml environment section
+
 **Solution**:
 1. Get API key from https://aistudio.google.com/apikey
 2. Set in server `.env`: `GEMINI_API_KEY=your_key_here`
-3. Restart: `docker-compose -f docker-compose.backend.yml restart backend`
+3. **IMPORTANT**: Add to docker-compose.backend.yml under `backend.environment`:
+   ```yaml
+   - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+   ```
+4. Restart with env file:
+   ```bash
+   docker-compose -f docker-compose.backend.yml down
+   docker-compose -f docker-compose.backend.yml --env-file .env up -d
+   ```
+5. Verify it's loaded: `docker-compose -f docker-compose.backend.yml exec backend printenv | grep GEMINI`
+
+**Note**: Simply having the key in `.env` is NOT enough - it must be explicitly passed in docker-compose.yml
 
 ## 🤖 AI Integration - Google AI Studio (Gemini)
 **Multi-Model Smart Routing System** ⭐ **FULLY OPERATIONAL**
@@ -241,13 +255,16 @@ docker-compose -f docker-compose.backend.yml restart backend
 - ✅ Frontend development complete
 - ✅ Apollo GraphQL client integration
 - ✅ AI usage tracking dashboard
+- ✅ **HTTPS Production Deployment** (nginx + Let's Encrypt SSL)
+- ✅ **Production URLs**: crookedfinger.chandlerhardy.com + backend.chandlerhardy.com
+- ✅ **CORS Configuration**: Fixed case-sensitive env var issue
+- ✅ **Hydration Fix**: Countdown timer SSR/client mismatch resolved
 
 ## 🚧 Remaining Tasks
 1. **PostgreSQL Integration for Pattern Library**: Migrate from localStorage to database
 2. **User Authentication**: Add login/register with JWT tokens
-3. **Production Deployment**: Deploy frontend to Vercel with production env vars
-4. **Pattern Sharing**: Enable pattern sharing between users
-5. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
+3. **Pattern Sharing**: Enable pattern sharing between users
+4. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
 
 ## 🔄 Development Workflow
 1. **Make changes** locally in frontend/ or backend/
@@ -257,5 +274,24 @@ docker-compose -f docker-compose.backend.yml restart backend
 5. **Frontend auto-deploys** via Vercel
 6. **Backend deploy**: Run `./deploy/deploy-backend-to-oci.sh 150.136.38.166`
 
+## 🔒 SSL/HTTPS Configuration
+**Status**: ✅ **FULLY OPERATIONAL**
+
+### Nginx Reverse Proxy
+- **Server**: backend.chandlerhardy.com (150.136.38.166)
+- **SSL Certificate**: Let's Encrypt (auto-renewed)
+- **Configuration**: `/etc/nginx/sites-available/backend.chandlerhardy.com`
+
+### Path Routing
+Both projects share the same nginx server with different paths:
+- **CryptAssist**: `https://backend.chandlerhardy.com/cryptassist/` → localhost:8000
+- **Crooked Finger**: `https://backend.chandlerhardy.com/crooked-finger/` → localhost:8001
+
+### Security Headers
+- HSTS enabled (max-age: 31536000)
+- X-Frame-Options: SAMEORIGIN
+- X-Content-Type-Options: nosniff
+- TLS 1.2/1.3 only
+
 ---
-*Last Updated: October 2025 - Professional Image Viewer enhancements*
+*Last Updated: October 2025 - HTTPS Production Deployment*
