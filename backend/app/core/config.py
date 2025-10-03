@@ -21,5 +21,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = "../.env"
         extra = "ignore"
+        case_sensitive = False  # Allow CORS_ORIGINS to map to cors_origins
 
 settings = Settings()
