@@ -34,6 +34,14 @@ interface ChatMessage {
   diagramPng?: string;
 }
 
+interface ChatConversation {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface SavedPattern {
   id: string;
   name: string;
@@ -59,6 +67,8 @@ export default function Home() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [chatLoading, setChatLoading] = useState(false);
   const [savedPatterns, setSavedPatterns] = useState<SavedPattern[]>([]);
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   // Load saved patterns from localStorage on mount
   useEffect(() => {
@@ -97,6 +107,47 @@ export default function Home() {
   // >(CHAT_WITH_ASSISTANT);
 
   // Mock data for demonstration
+  // Load conversations from localStorage on mount
+  useEffect(() => {
+    const loadConversations = () => {
+      try {
+        const stored = localStorage.getItem('crooked-finger-conversations');
+        if (stored) {
+          const parsed = JSON.parse(stored) as ChatConversation[];
+          const conversationsWithDates = parsed.map((conv) => ({
+            ...conv,
+            createdAt: conv.createdAt ? new Date(conv.createdAt) : new Date(),
+            updatedAt: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
+            messages: conv.messages.map((msg) => ({
+              ...msg,
+              timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+            })),
+          }));
+          setConversations(conversationsWithDates);
+
+          // Set most recent conversation as active
+          if (conversationsWithDates.length > 0) {
+            setActiveConversationId(conversationsWithDates[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading conversations:', error);
+      }
+    };
+    loadConversations();
+  }, []);
+
+  // Save conversations to localStorage whenever they change
+  useEffect(() => {
+    if (conversations.length > 0) {
+      try {
+        localStorage.setItem('crooked-finger-conversations', JSON.stringify(conversations));
+      } catch (error) {
+        console.error('Error saving conversations:', error);
+      }
+    }
+  }, [conversations]);
+
   const [projects, setProjects] = useState<Project[]>([
     {
       id: '1',
@@ -192,9 +243,40 @@ Make 2.`,
     },
   ]);
 
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const handleCreateNewChat = () => {
+    const newConversation: ChatConversation = {
+      id: Date.now().toString(),
+      title: 'New Chat',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    setConversations(prev => [newConversation, ...prev]);
+    setActiveConversationId(newConversation.id);
+    setCurrentPage('chat');
+  };
+
+  const handleOpenConversation = (conversationId: string) => {
+    setActiveConversationId(conversationId);
+    setCurrentPage('chat');
+  };
 
   const handleSendMessage = async (message: string) => {
+    // Create new conversation if none exists or none is active
+    let conversationId = activeConversationId;
+    if (!conversationId) {
+      const newConversation: ChatConversation = {
+        id: Date.now().toString(),
+        title: message.slice(0, 50) + (message.length > 50 ? '...' : ''),
+        messages: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      setConversations(prev => [newConversation, ...prev]);
+      conversationId = newConversation.id;
+      setActiveConversationId(conversationId);
+    }
+
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
@@ -203,7 +285,24 @@ Make 2.`,
       isPattern: message.includes('ch ') || message.includes('dc') || message.includes('sc') || message.includes('tog'),
     };
 
-    setChatHistory(prev => [...prev, userMessage]);
+    // Update conversation with new message
+    setConversations(prev => prev.map(conv => {
+      if (conv.id === conversationId) {
+        // Update title if this is the first message
+        const title = conv.messages.length === 0
+          ? message.slice(0, 50) + (message.length > 50 ? '...' : '')
+          : conv.title;
+
+        return {
+          ...conv,
+          title,
+          messages: [...conv.messages, userMessage],
+          updatedAt: new Date(),
+        };
+      }
+      return conv;
+    }));
+
     setChatLoading(true);
 
     try {
@@ -245,7 +344,18 @@ Make 2.`,
           diagramSvg: response.diagramSvg,
           diagramPng: response.diagramPng,
         };
-        setChatHistory(prev => [...prev, assistantMessage]);
+
+        // Update conversation with assistant response
+        setConversations(prev => prev.map(conv => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              messages: [...conv.messages, assistantMessage],
+              updatedAt: new Date(),
+            };
+          }
+          return conv;
+        }));
       } else if (result.errors) {
         console.error('GraphQL errors:', result.errors);
         throw new Error('GraphQL mutation not available');
@@ -261,7 +371,18 @@ Make 2.`,
         timestamp: new Date(),
         isPattern: true,
       };
-      setChatHistory(prev => [...prev, assistantMessage]);
+
+      // Update conversation with assistant response
+      setConversations(prev => prev.map(conv => {
+        if (conv.id === conversationId) {
+          return {
+            ...conv,
+            messages: [...conv.messages, assistantMessage],
+            updatedAt: new Date(),
+          };
+        }
+        return conv;
+      }));
     } finally {
       setChatLoading(false);
     }
@@ -347,22 +468,27 @@ Make 2.`,
   };
 
   const renderCurrentPage = () => {
+    const activeConversation = conversations.find(c => c.id === activeConversationId);
+
     switch (currentPage) {
       case 'home':
         return (
           <HomePage
             recentProjects={projects.slice(0, 3)}
-            recentChats={chatHistory.slice(-3)}
+            recentConversations={conversations.slice(0, 3)}
             onNavigate={setCurrentPage}
             onProjectClick={handleProjectClick}
+            onConversationClick={handleOpenConversation}
+            onNewChat={handleCreateNewChat}
           />
         );
       case 'chat':
         return (
           <ChatInterface
-            chatHistory={chatHistory}
+            chatHistory={activeConversation?.messages || []}
             onSendMessage={handleSendMessage}
             loading={chatLoading}
+            onNewChat={handleCreateNewChat}
           />
         );
       case 'projects':
@@ -417,9 +543,11 @@ Make 2.`,
         return (
           <HomePage
             recentProjects={projects.slice(0, 3)}
-            recentChats={chatHistory.slice(-3)}
+            recentConversations={conversations.slice(0, 3)}
             onNavigate={setCurrentPage}
             onProjectClick={handleProjectClick}
+            onConversationClick={handleOpenConversation}
+            onNewChat={handleCreateNewChat}
           />
         );
     }

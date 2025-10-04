@@ -295,32 +295,38 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - **Create Project from Pattern**: Duplicates pattern with notes to mark as active project
 
 ### Authentication Status
-**⚠️ TEMPORARILY DISABLED** due to backend bcrypt library bug
+✅ **FULLY ENABLED** - Authentication system complete (Oct 4, 2025)
 
 **What was implemented:**
 - Full JWT authentication system (login, register, logout)
 - Token storage in UserDefaults with persistence
 - AuthViewModel for state management
 - Login/Register views with form validation
+- Protected app navigation (LoginView ↔ TabNavigationView)
+- Authorization header automatically added to GraphQL requests
 
-**Why disabled:**
-- Production backend bcrypt library has a bug: "password cannot be longer than 72 bytes"
-- Affects both password hashing AND verification
-- Even simple passwords like "debug" trigger the error
-- Auth has never been tested on web app either
+**Backend Migration (Oct 4, 2025):**
+- ✅ Migrated from `passlib[bcrypt]` to `argon2-cffi` for password hashing
+- ✅ Fixed `get_context()` to manually get db session (Depends doesn't work in context_getter)
+- ✅ Removed `request.user = user` line (FastAPI Request has no setter)
+- ✅ Deployed to production with Argon2 hashing
+- ✅ All existing users with bcrypt hashes updated to Argon2
 
-**Temporary workaround applied:**
-- iOS app: Auth header commented out in `GraphQLClient.swift`
-- Backend: Auth checks commented out in `mutations.py` (create/update/delete project)
-- Backend: `request.user` assignments removed (property has no setter)
-- Allows null `user_id` for projects when not authenticated
+**Test Accounts:**
+- Test accounts available for development (see private Notion docs for credentials)
 
-**TODO when re-enabling auth:**
-1. Fix bcrypt library on production server
-2. Uncomment auth logic in `GraphQLClient.swift:53-63`
-3. Uncomment auth checks in backend `mutations.py`
-4. Re-enable login screen in `Crooked_Finger_iOSApp.swift`
-5. Test end-to-end auth flow
+**Key Files Changed:**
+- `backend/requirements.txt`: Replaced `passlib[bcrypt]==1.7.4` → `argon2-cffi==23.1.0`
+- `backend/app/utils/auth.py`: Uses `PasswordHasher()` from argon2
+- `backend/app/main.py`: Fixed context_getter db session handling
+- `Crooked_Finger_iOSApp.swift`: Conditional rendering based on `isAuthenticated`
+- `GraphQLClient.swift`: Auth header re-enabled (lines 53-59)
+
+**Future Enhancements:**
+1. Migrate iOS token storage from UserDefaults to Keychain
+2. Implement JWT token refresh mechanism
+3. Add biometric authentication (Face ID/Touch ID)
+4. Implement web app login/register UI (currently iOS-only)
 
 ### iOS File Structure
 ```
@@ -384,12 +390,14 @@ crooked-finger-ios/
 - Native navigation patterns (SwiftUI)
 
 ## 🚧 Remaining Tasks
-1. **Fix Backend Authentication**: Resolve bcrypt library bug on production server
-2. **Re-enable iOS Authentication**: Uncomment auth logic after backend fix
-3. **Implement Web Authentication**: Add login/register to web app (currently unauthenticated)
-4. **AI Chat on iOS**: Port web chat interface to SwiftUI
-5. **YouTube Integration on iOS**: Add video transcript extraction
-6. **Image Viewer on iOS**: Professional zoom/pan like web
+1. ✅ ~~**Fix Backend Authentication**~~: Resolved with Argon2 migration (Oct 4, 2025)
+2. ✅ ~~**Re-enable iOS Authentication**~~: Complete with login/register/logout flow
+3. **Implement Web Authentication**: Add login/register to web app (currently iOS-only)
+4. ✅ ~~**AI Chat on iOS**~~: Complete with ChatViewModel and full backend integration
+5. **YouTube Integration on iOS**: Add video transcript extraction UI
+6. **Image Upload on iOS**: Camera integration and base64 upload
+7. **Image Viewer on iOS**: Professional zoom/pan like web
+8. **AI Usage Dashboard on iOS**: Port token usage tracking from web
 7. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
 8. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
 

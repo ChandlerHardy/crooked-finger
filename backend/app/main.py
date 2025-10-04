@@ -35,42 +35,28 @@ app.add_middleware(
 )
 
 # Authentication middleware for GraphQL context
-async def get_context(request: Request, db: Session = Depends(get_db)):
+async def get_context(request: Request):
     """Add user to GraphQL context if authenticated"""
     context = {"request": request}
 
     authorization = request.headers.get("authorization", "")
     if authorization.startswith("Bearer "):
         token = authorization.split(" ")[1]
+        # Need to get db session here since Depends doesn't work in context_getter
+        db = next(get_db())
         try:
             user = get_current_user_from_token(token, db)
             if user:
-                # Add user to request for GraphQL resolvers
-                request.user = user
+                # Add user to context for GraphQL resolvers
                 context["user"] = user
-        except Exception:
+        except Exception as e:
+            print(f"Auth error: {e}")  # Debug logging
             pass  # Invalid token, continue without user
+        finally:
+            db.close()
 
-    # TODO: Re-enable auth requirement when bcrypt is fixed
-    # In debug mode, provide a default user if no auth token
-    if settings.debug and "user" not in context:
-        # Get or create a default debug user
-        default_user = db.query(User).filter(User.email == "debug@crookedfinger.com").first()
-        if not default_user:
-            # Create default debug user if it doesn't exist
-            from app.utils.auth import get_password_hash
-            default_user = User(
-                email="debug@crookedfinger.com",
-                hashed_password=get_password_hash("debug"),
-                is_active=True,
-                is_verified=True,
-                is_admin=False
-            )
-            db.add(default_user)
-            db.commit()
-            db.refresh(default_user)
-        request.user = default_user
-        context["user"] = default_user
+    # Note: Authentication is now required for mutations that need user context
+    # Debug mode still allows GraphQL playground access, but mutations will fail without valid auth token
 
     return context
 

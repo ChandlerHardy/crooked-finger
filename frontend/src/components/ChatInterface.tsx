@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Send, Sparkles, FileText, MessageCircle, Image as ImageIcon, X, Paperclip } from 'lucide-react';
+import { Send, Sparkles, FileText, MessageCircle, Image as ImageIcon, X, Paperclip, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
@@ -24,9 +24,10 @@ interface ChatInterfaceProps {
   onSendMessage: (message: string) => void;
   loading?: boolean;
   hideHeader?: boolean;
+  onNewChat?: () => void;
 }
 
-export function ChatInterface({ chatHistory, onSendMessage, loading = false, hideHeader = false }: ChatInterfaceProps) {
+export function ChatInterface({ chatHistory, onSendMessage, loading = false, hideHeader = false, onNewChat }: ChatInterfaceProps) {
   const [message, setMessage] = useState('');
   const [pastedImages, setPastedImages] = useState<string[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -110,15 +111,30 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, hid
     <div className="flex flex-col h-full">
       {!hideHeader && (
         <div className="border-b border-border p-6 bg-gradient-to-r from-primary/15 to-primary/5">
-          <h2 className="text-xl font-medium flex items-center gap-3 text-primary-foreground">
-            <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-medium flex items-center gap-3 text-primary-foreground">
+                <div className="w-8 h-8 bg-primary/20 rounded-2xl flex items-center justify-center">
+                  <Sparkles className="h-4 w-4 text-primary-foreground" />
+                </div>
+                GRANNi
+              </h2>
+              <p className="text-sm text-primary-foreground/80 mt-2 leading-relaxed">
+                Transform complex crochet notation into easy-to-follow, cozy instructions
+              </p>
             </div>
-            GRANNi
-          </h2>
-          <p className="text-sm text-primary-foreground/80 mt-2 leading-relaxed">
-            Transform complex crochet notation into easy-to-follow, cozy instructions
-          </p>
+            {onNewChat && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNewChat}
+                className="rounded-2xl border-primary/30 hover:border-primary/50 hover:bg-primary/10 flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Chat
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
