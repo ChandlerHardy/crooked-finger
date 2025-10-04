@@ -34,6 +34,7 @@ class CrochetProject(Base):
     yarn_weight = Column(String)  # DK, Worsted, etc.
     hook_size = Column(String)  # 4mm, 5mm, etc.
     notes = Column(Text)  # User notes
+    image_data = Column(Text)  # JSON array of base64 image strings
     is_completed = Column(Boolean, default=False)
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)

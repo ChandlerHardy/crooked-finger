@@ -129,6 +129,7 @@ class Mutation:
                 yarn_weight=input.yarn_weight,
                 hook_size=input.hook_size,
                 notes=input.notes,
+                image_data=input.image_data,
                 is_completed=False,
                 user_id=user.id,
                 created_at=datetime.utcnow(),
@@ -196,6 +197,8 @@ class Mutation:
                 db_project.hook_size = input.hook_size
             if input.notes is not None:
                 db_project.notes = input.notes
+            if input.image_data is not None:
+                db_project.image_data = input.image_data
             if input.is_completed is not None:
                 db_project.is_completed = input.is_completed
 
@@ -213,6 +216,7 @@ class Mutation:
                 yarn_weight=db_project.yarn_weight,
                 hook_size=db_project.hook_size,
                 notes=db_project.notes,
+                image_data=db_project.image_data,
                 is_completed=db_project.is_completed,
                 user_id=db_project.user_id,
                 created_at=db_project.created_at,

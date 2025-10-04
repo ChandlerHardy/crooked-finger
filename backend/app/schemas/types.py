@@ -24,6 +24,7 @@ class CrochetProject:
     yarn_weight: Optional[str] = None
     hook_size: Optional[str] = None
     notes: Optional[str] = None
+    image_data: Optional[str] = None
     is_completed: bool
     user_id: int
     created_at: datetime
@@ -73,6 +74,7 @@ class CreateProjectInput:
     yarn_weight: Optional[str] = None
     hook_size: Optional[str] = None
     notes: Optional[str] = None
+    image_data: Optional[str] = None
 
 @strawberry.input
 class UpdateProjectInput:
@@ -84,6 +86,7 @@ class UpdateProjectInput:
     yarn_weight: Optional[str] = None
     hook_size: Optional[str] = None
     notes: Optional[str] = None
+    image_data: Optional[str] = None
     is_completed: Optional[bool] = None
 
 @strawberry.type
