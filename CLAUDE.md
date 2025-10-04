@@ -272,11 +272,126 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - ✅ **CORS Configuration**: Fixed case-sensitive env var issue
 - ✅ **Hydration Fix**: Countdown timer SSR/client mismatch resolved
 
+## 📱 iOS App Development
+**Status**: ✅ **PATTERNS & PROJECTS BACKEND INTEGRATION COMPLETE**
+
+### Completed Features
+- ✅ SwiftUI app with tab navigation (Chat, Projects, Patterns, Settings)
+- ✅ GraphQL client using URLSession (no Apollo codegen)
+- ✅ Pattern library with backend integration (create, read, delete)
+- ✅ Project management with backend integration
+- ✅ Authentication system (login/register UI) - **TEMPORARILY DISABLED**
+- ✅ Clean brown/tan color scheme matching web app
+- ✅ Empty state views with helpful messaging
+- ✅ Pull-to-refresh on lists
+- ✅ Error handling with copy-to-clipboard
+
+### iOS-Specific Implementation Notes
+- **GraphQL Client**: Custom implementation in `GraphQLClient.swift` using native URLSession
+- **Response Parsing**: Uses native Swift dictionaries instead of Codable structs for GraphQL variables to avoid JSON encoding issues
+- **Pattern/Project Distinction**: Same backend table (`CrochetProject`), filtered by `notes` field:
+  - Patterns: `notes == null` (templates for reuse)
+  - Projects: `notes != null` (active projects being worked on)
+- **Create Project from Pattern**: Duplicates pattern with notes to mark as active project
+
+### Authentication Status
+**⚠️ TEMPORARILY DISABLED** due to backend bcrypt library bug
+
+**What was implemented:**
+- Full JWT authentication system (login, register, logout)
+- Token storage in UserDefaults with persistence
+- AuthViewModel for state management
+- Login/Register views with form validation
+
+**Why disabled:**
+- Production backend bcrypt library has a bug: "password cannot be longer than 72 bytes"
+- Affects both password hashing AND verification
+- Even simple passwords like "debug" trigger the error
+- Auth has never been tested on web app either
+
+**Temporary workaround applied:**
+- iOS app: Auth header commented out in `GraphQLClient.swift`
+- Backend: Auth checks commented out in `mutations.py` (create/update/delete project)
+- Backend: `request.user` assignments removed (property has no setter)
+- Allows null `user_id` for projects when not authenticated
+
+**TODO when re-enabling auth:**
+1. Fix bcrypt library on production server
+2. Uncomment auth logic in `GraphQLClient.swift:53-63`
+3. Uncomment auth checks in backend `mutations.py`
+4. Re-enable login screen in `Crooked_Finger_iOSApp.swift`
+5. Test end-to-end auth flow
+
+### iOS File Structure
+```
+crooked-finger-ios/
+├── Crooked Finger iOS/
+│   ├── App/
+│   │   └── Crooked_Finger_iOSApp.swift      # App entry point
+│   ├── Services/
+│   │   └── GraphQL/
+│   │       ├── GraphQLClient.swift           # URLSession-based GraphQL client
+│   │       └── GraphQLOperations.swift       # Query/mutation strings + response types
+│   ├── ViewModels/
+│   │   ├── AuthViewModel.swift               # Authentication state
+│   │   ├── PatternViewModel.swift            # Pattern CRUD operations
+│   │   └── ProjectViewModel.swift            # Project CRUD operations
+│   ├── Models/
+│   │   ├── Pattern.swift                     # Pattern data model
+│   │   └── Project.swift                     # Project data model
+│   ├── Views/
+│   │   ├── Auth/
+│   │   │   ├── LoginView.swift               # Login form
+│   │   │   └── RegisterView.swift            # Registration form
+│   │   ├── Patterns/
+│   │   │   ├── PatternLibraryView.swift      # Pattern list with search
+│   │   │   └── PatternDetailView.swift       # Pattern details + create project
+│   │   ├── Projects/
+│   │   │   ├── ProjectsView.swift            # Project list
+│   │   │   └── ProjectDetailView.swift       # Project management
+│   │   ├── Chat/
+│   │   │   └── ChatView.swift                # AI chat (placeholder)
+│   │   ├── Settings/
+│   │   │   └── SettingsView.swift            # Settings + logout
+│   │   └── Navigation/
+│   │       └── TabNavigationView.swift       # Main tab bar
+│   └── Utilities/
+│       ├── Constants.swift                   # API URLs, app constants
+│       ├── Colors.swift                      # Color scheme
+│       └── EmptyStateView.swift              # Reusable empty states
+```
+
+## 🔄 Feature Parity Tracker (iOS ↔ Web)
+
+### ✅ Implemented on Both Platforms
+- Pattern Library (view, create, delete)
+- Project Management (view, create, delete)
+- GraphQL backend integration
+- Error handling
+- Empty states
+
+### 🌐 Web-Only Features (TODO for iOS)
+- AI Chat interface with multi-model Gemini
+- YouTube transcript extraction
+- Pattern diagram generation (matplotlib charts)
+- Professional image viewer with zoom/pan
+- AI usage dashboard
+- Pattern sharing
+
+### 📱 iOS-Only Features (TODO for Web)
+- Native pull-to-refresh gestures
+- System color scheme support (light/dark mode)
+- Native navigation patterns (SwiftUI)
+
 ## 🚧 Remaining Tasks
-1. **PostgreSQL Integration for Pattern Library**: Migrate from localStorage to database
-2. **User Authentication**: Add login/register with JWT tokens
-3. **Pattern Sharing**: Enable pattern sharing between users
-4. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
+1. **Fix Backend Authentication**: Resolve bcrypt library bug on production server
+2. **Re-enable iOS Authentication**: Uncomment auth logic after backend fix
+3. **Implement Web Authentication**: Add login/register to web app (currently unauthenticated)
+4. **AI Chat on iOS**: Port web chat interface to SwiftUI
+5. **YouTube Integration on iOS**: Add video transcript extraction
+6. **Image Viewer on iOS**: Professional zoom/pan like web
+7. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
+8. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
 
 ## 🔄 Development Workflow
 1. **Make changes** locally in `frontend/` or `backend/` directories
