@@ -51,6 +51,27 @@ async def get_context(request: Request, db: Session = Depends(get_db)):
         except Exception:
             pass  # Invalid token, continue without user
 
+    # TODO: Re-enable auth requirement when bcrypt is fixed
+    # In debug mode, provide a default user if no auth token
+    if settings.debug and "user" not in context:
+        # Get or create a default debug user
+        default_user = db.query(User).filter(User.email == "debug@crookedfinger.com").first()
+        if not default_user:
+            # Create default debug user if it doesn't exist
+            from app.utils.auth import get_password_hash
+            default_user = User(
+                email="debug@crookedfinger.com",
+                hashed_password=get_password_hash("debug"),
+                is_active=True,
+                is_verified=True,
+                is_admin=False
+            )
+            db.add(default_user)
+            db.commit()
+            db.refresh(default_user)
+        request.user = default_user
+        context["user"] = default_user
+
     return context
 
 # GraphQL endpoint access control (similar to CryptAssist)
