@@ -43,11 +43,13 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 ## Core Features
 1. **Pattern Translation**: Convert crochet notation to readable instructions
 2. **AI Assistant**: Multi-model Gemini chat interface for pattern clarification
-3. **Professional Diagram Generation**: matplotlib-based crochet charts with authentic symbols
-4. **YouTube Transcript Extraction**: Extract patterns from crochet tutorial videos
-5. **Pattern Library**: Browse, save, and manage crochet patterns with image galleries
-6. **Project Management**: Track crochet projects with images, notes, and chat history
-7. **Professional Image Viewer**: Zoom, pan, and navigate project/pattern images
+3. **Conversation Management**: Cross-platform chat sync with conversation history (Oct 5, 2025)
+4. **Professional Diagram Generation**: matplotlib-based crochet charts with authentic symbols
+5. **YouTube Transcript Extraction**: Extract patterns from crochet tutorial videos
+6. **Pattern Library**: Browse, save, and manage crochet patterns with image galleries
+7. **Project Management**: Track crochet projects with images, notes, and chat history
+8. **Professional Image Viewer**: Zoom, pan, and navigate project/pattern images
+9. **User Authentication**: JWT-based login/register with Argon2 password hashing
 
 ## 📁 Project Structure
 ```
@@ -56,17 +58,20 @@ crooked-finger/
 │   ├── app/
 │   │   ├── main.py                       # FastAPI entry point
 │   │   ├── core/config.py                # Environment configuration (.env loading)
-│   │   ├── database/models.py            # User, Project, Chat models
+│   │   ├── database/models.py            # User, Project, Chat, Conversation models
 │   │   ├── schemas/
 │   │   │   ├── queries.py                # GraphQL queries
-│   │   │   └── mutations.py              # GraphQL mutations
+│   │   │   ├── mutations.py              # GraphQL mutations
+│   │   │   └── types.py                  # GraphQL types (Conversation, ChatMessage, etc.)
 │   │   ├── services/
 │   │   │   ├── ai_service.py             # Multi-model Gemini integration
 │   │   │   ├── pattern_service.py        # Pattern parsing & diagram generation
 │   │   │   ├── matplotlib_crochet_service.py # Professional chart generation
 │   │   │   ├── granny_square_service.py  # Granny square charts (SVG)
 │   │   │   └── youtube_service.py        # YouTube transcript extraction
-│   │   └── utils/auth.py                 # JWT authentication
+│   │   └── utils/auth.py                 # JWT authentication (Argon2 hashing)
+│   ├── migrations/
+│   │   └── add_conversations_table.py    # Database migration for conversations
 │   ├── .env                              # Local development environment variables
 │   └── requirements.txt
 │
@@ -271,6 +276,8 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - ✅ **Production URLs**: crookedfinger.chandlerhardy.com + backend.chandlerhardy.com
 - ✅ **CORS Configuration**: Fixed case-sensitive env var issue
 - ✅ **Hydration Fix**: Countdown timer SSR/client mismatch resolved
+- ✅ **Conversation Backend**: Database schema, GraphQL API, cross-platform sync (Oct 5, 2025)
+- ✅ **Docker Healthcheck**: Fixed from curl to Python urllib (Oct 5, 2025)
 
 ## 📱 iOS App Development
 **Status**: ✅ **PATTERNS & PROJECTS BACKEND INTEGRATION COMPLETE**
@@ -280,7 +287,9 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - ✅ GraphQL client using URLSession (no Apollo codegen)
 - ✅ Pattern library with backend integration (create, read, delete)
 - ✅ Project management with backend integration
-- ✅ Authentication system (login/register UI) - **TEMPORARILY DISABLED**
+- ✅ Authentication system (login/register/logout) - **FULLY ENABLED**
+- ✅ **Conversation Management** - Backend sync for cross-platform chat (Oct 5, 2025)
+- ✅ AI Chat interface with full backend integration
 - ✅ Clean brown/tan color scheme matching web app
 - ✅ Empty state views with helpful messaging
 - ✅ Pull-to-refresh on lists
@@ -293,6 +302,10 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
   - Patterns: `notes == null` (templates for reuse)
   - Projects: `notes != null` (active projects being worked on)
 - **Create Project from Pattern**: Duplicates pattern with notes to mark as active project
+- **Conversation Sync**: iOS creates backend conversation on first message, stores `backendId` for cross-platform access
+  - Local cache in UserDefaults for offline capability
+  - Auto-generates titles from first user message
+  - Cascade delete of messages when conversation is deleted
 
 ### Authentication Status
 ✅ **FULLY ENABLED** - Authentication system complete (Oct 4, 2025)
@@ -312,8 +325,9 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - ✅ Deployed to production with Argon2 hashing
 - ✅ All existing users with bcrypt hashes updated to Argon2
 
-**Test Accounts:**
-- Test accounts available for development (see private Notion docs for credentials)
+**Admin Account:**
+- Admin credentials available in private Notion documentation
+- Created: October 5, 2025
 
 **Key Files Changed:**
 - `backend/requirements.txt`: Replaced `passlib[bcrypt]==1.7.4` → `argon2-cffi==23.1.0`
@@ -340,9 +354,12 @@ crooked-finger-ios/
 │   │       └── GraphQLOperations.swift       # Query/mutation strings + response types
 │   ├── ViewModels/
 │   │   ├── AuthViewModel.swift               # Authentication state
+│   │   ├── ChatViewModel.swift               # Chat + conversation management
 │   │   ├── PatternViewModel.swift            # Pattern CRUD operations
 │   │   └── ProjectViewModel.swift            # Project CRUD operations
 │   ├── Models/
+│   │   ├── ChatMessage.swift                 # Chat message data model
+│   │   ├── Conversation.swift                # Conversation data model
 │   │   ├── Pattern.swift                     # Pattern data model
 │   │   └── Project.swift                     # Project data model
 │   ├── Views/
@@ -356,7 +373,8 @@ crooked-finger-ios/
 │   │   │   ├── ProjectsView.swift            # Project list
 │   │   │   └── ProjectDetailView.swift       # Project management
 │   │   ├── Chat/
-│   │   │   └── ChatView.swift                # AI chat (placeholder)
+│   │   │   ├── ChatView.swift                # AI chat interface
+│   │   │   └── MessageRowView.swift          # Chat message cells
 │   │   ├── Settings/
 │   │   │   └── SettingsView.swift            # Settings + logout
 │   │   └── Navigation/
@@ -372,12 +390,14 @@ crooked-finger-ios/
 ### ✅ Implemented on Both Platforms
 - Pattern Library (view, create, delete)
 - Project Management (view, create, delete)
+- AI Chat interface with multi-model Gemini
+- Conversation management with backend sync
 - GraphQL backend integration
+- User authentication (login/register/logout)
 - Error handling
 - Empty states
 
 ### 🌐 Web-Only Features (TODO for iOS)
-- AI Chat interface with multi-model Gemini
 - YouTube transcript extraction
 - Pattern diagram generation (matplotlib charts)
 - Professional image viewer with zoom/pan
@@ -392,14 +412,16 @@ crooked-finger-ios/
 ## 🚧 Remaining Tasks
 1. ✅ ~~**Fix Backend Authentication**~~: Resolved with Argon2 migration (Oct 4, 2025)
 2. ✅ ~~**Re-enable iOS Authentication**~~: Complete with login/register/logout flow
-3. **Implement Web Authentication**: Add login/register to web app (currently iOS-only)
-4. ✅ ~~**AI Chat on iOS**~~: Complete with ChatViewModel and full backend integration
-5. **YouTube Integration on iOS**: Add video transcript extraction UI
-6. **Image Upload on iOS**: Camera integration and base64 upload
-7. **Image Viewer on iOS**: Professional zoom/pan like web
-8. **AI Usage Dashboard on iOS**: Port token usage tracking from web
-7. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
-8. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
+3. ✅ ~~**AI Chat on iOS**~~: Complete with ChatViewModel and full backend integration
+4. ✅ ~~**Backend Conversation Sync**~~: Complete with conversation management (Oct 5, 2025)
+5. **Implement Web Authentication**: Add login/register to web app (currently iOS-only)
+6. **Web Conversation UI**: Add conversation list and management to web app
+7. **YouTube Integration on iOS**: Add video transcript extraction UI
+8. **Image Upload on iOS**: Camera integration and base64 upload
+9. **Image Viewer on iOS**: Professional zoom/pan like web
+10. **AI Usage Dashboard on iOS**: Port token usage tracking from web
+11. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
+12. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
 
 ## 🔄 Development Workflow
 1. **Make changes** locally in `frontend/` or `backend/` directories
@@ -441,4 +463,4 @@ Both projects share the same nginx server with different paths:
 - TLS 1.2/1.3 only
 
 ---
-*Last Updated: October 2025 - HTTPS Production Deployment*
+*Last Updated: October 5, 2025 - Conversation Backend Sync Complete*
