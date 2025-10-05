@@ -40,7 +40,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/crooked-finger/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/crooked-finger/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
