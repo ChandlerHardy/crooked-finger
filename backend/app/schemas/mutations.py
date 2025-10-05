@@ -5,9 +5,9 @@ from strawberry.types import Info
 from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
-    User, AuthResponse, CrochetProject, ChatResponse, ResetUsageResponse,
+    User, AuthResponse, CrochetProject, Conversation, ChatResponse, ResetUsageResponse,
     YouTubeTranscriptResponse, ExtractedPattern, RegisterInput, LoginInput,
-    CreateProjectInput, UpdateProjectInput
+    CreateProjectInput, UpdateProjectInput, CreateConversationInput, UpdateConversationInput
 )
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
@@ -253,6 +253,119 @@ class Mutation:
             db.close()
 
     @strawberry.field
+    async def create_conversation(
+        self,
+        info: Info,
+        input: CreateConversationInput
+    ) -> Conversation:
+        """Create a new conversation"""
+        user = info.context.get("user")
+        if not user:
+            raise Exception("Authentication required")
+
+        db = next(get_db())
+        try:
+            db_conversation = models.Conversation(
+                title=input.title or "New Chat",
+                user_id=user.id,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+
+            db.add(db_conversation)
+            db.commit()
+            db.refresh(db_conversation)
+
+            # Count messages in this conversation
+            message_count = db.query(models.ChatMessage).filter(
+                models.ChatMessage.conversation_id == db_conversation.id
+            ).count()
+
+            return Conversation(
+                id=db_conversation.id,
+                title=db_conversation.title,
+                user_id=db_conversation.user_id,
+                created_at=db_conversation.created_at,
+                updated_at=db_conversation.updated_at,
+                message_count=message_count
+            )
+        finally:
+            db.close()
+
+    @strawberry.field
+    async def update_conversation(
+        self,
+        info: Info,
+        conversation_id: int,
+        input: UpdateConversationInput
+    ) -> Conversation:
+        """Update an existing conversation"""
+        user = info.context.get("user")
+        if not user:
+            raise Exception("Authentication required")
+
+        db = next(get_db())
+        try:
+            db_conversation = db.query(models.Conversation).filter(
+                models.Conversation.id == conversation_id,
+                models.Conversation.user_id == user.id
+            ).first()
+
+            if not db_conversation:
+                raise Exception("Conversation not found")
+
+            # Update fields if provided
+            if input.title is not None:
+                db_conversation.title = input.title
+
+            db_conversation.updated_at = datetime.utcnow()
+            db.commit()
+            db.refresh(db_conversation)
+
+            # Count messages in this conversation
+            message_count = db.query(models.ChatMessage).filter(
+                models.ChatMessage.conversation_id == db_conversation.id
+            ).count()
+
+            return Conversation(
+                id=db_conversation.id,
+                title=db_conversation.title,
+                user_id=db_conversation.user_id,
+                created_at=db_conversation.created_at,
+                updated_at=db_conversation.updated_at,
+                message_count=message_count
+            )
+        finally:
+            db.close()
+
+    @strawberry.field
+    async def delete_conversation(
+        self,
+        info: Info,
+        conversation_id: int
+    ) -> bool:
+        """Delete a conversation and all its messages"""
+        user = info.context.get("user")
+        if not user:
+            raise Exception("Authentication required")
+
+        db = next(get_db())
+        try:
+            db_conversation = db.query(models.Conversation).filter(
+                models.Conversation.id == conversation_id,
+                models.Conversation.user_id == user.id
+            ).first()
+
+            if not db_conversation:
+                raise Exception("Conversation not found")
+
+            db.delete(db_conversation)
+            db.commit()
+            return True
+        finally:
+            db.close()
+
+    @strawberry.field
     async def chat_with_assistant(
         self,
         message: str,
@@ -288,14 +401,22 @@ class Mutation:
     @strawberry.field
     async def chat_with_assistant_enhanced(
         self,
+        info: Info,
         message: str,
+        conversation_id: Optional[int] = None,
         context: Optional[str] = None
     ) -> ChatResponse:
         """Enhanced chat with AI assistant that can generate pattern diagrams"""
+        user = info.context.get("user")
+
         db = next(get_db())
         try:
             # Get recent chat history for context (generous limit with 1M token context window)
-            chat_history = get_recent_chat_history(db, limit=100)
+            # If conversation_id is provided, filter by that conversation
+            if conversation_id:
+                chat_history = get_conversation_chat_history(db, conversation_id, limit=100)
+            else:
+                chat_history = get_recent_chat_history(db, user.id if user else None, limit=100)
 
             # Analyze user request for pattern type and diagram needs
             user_analysis = rag_service.analyze_user_request(message)
@@ -322,7 +443,7 @@ class Mutation:
                 pass
 
             # Store the conversation in database
-            store_chat_message(db, message, ai_response)
+            store_chat_message(db, message, ai_response, user.id if user else None, None, conversation_id)
 
             return ChatResponse(
                 message=ai_response,
@@ -602,18 +723,47 @@ def get_recent_chat_history(db: Session, user_id: int = None, limit: int = 100) 
     return "\n".join(history_parts)
 
 
-def store_chat_message(db: Session, user_message: str, ai_response: str, user_id: int = None, project_id: int = None) -> None:
+def get_conversation_chat_history(db: Session, conversation_id: int, limit: int = 100) -> str:
+    """Get chat history for a specific conversation formatted for AI context"""
+    # Get messages in this conversation ordered by creation time
+    messages = db.query(models.ChatMessage).filter(
+        models.ChatMessage.conversation_id == conversation_id
+    ).order_by(models.ChatMessage.created_at.desc()).limit(limit).all()
+
+    if not messages:
+        return ""
+
+    # Format as conversation history (reverse to chronological order)
+    history_parts = []
+    for msg in reversed(messages):
+        history_parts.append(f"User: {msg.message}")
+        history_parts.append(f"Assistant: {msg.response}")
+
+    return "\n".join(history_parts)
+
+
+def store_chat_message(db: Session, user_message: str, ai_response: str, user_id: int = None, project_id: int = None, conversation_id: int = None) -> None:
     """Store chat message and response in database"""
     chat_message = models.ChatMessage(
         message=user_message,
         response=ai_response,
         user_id=user_id,
         project_id=project_id,
+        conversation_id=conversation_id,
         created_at=datetime.utcnow()
     )
 
     db.add(chat_message)
     db.commit()
+
+    # Update conversation's updated_at timestamp if conversation_id is provided
+    if conversation_id:
+        conversation = db.query(models.Conversation).filter(
+            models.Conversation.id == conversation_id
+        ).first()
+        if conversation:
+            conversation.updated_at = datetime.utcnow()
+            db.commit()
 
 
 def _parse_pattern_response(ai_response: str) -> Optional[dict]:

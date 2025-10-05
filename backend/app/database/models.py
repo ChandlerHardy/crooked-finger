@@ -21,6 +21,7 @@ class User(Base):
     # Relationships
     projects = relationship("CrochetProject", back_populates="user")
     chat_messages = relationship("ChatMessage", back_populates="user")
+    conversations = relationship("Conversation", back_populates="user")
 
 class CrochetProject(Base):
     __tablename__ = "crochet_projects"
@@ -45,6 +46,19 @@ class CrochetProject(Base):
     chat_messages = relationship("ChatMessage", back_populates="project")
     diagrams = relationship("ProjectDiagram", back_populates="project")
 
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, default="New Chat")
+    user_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="conversations")
+    chat_messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan")
+
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
@@ -52,6 +66,7 @@ class ChatMessage(Base):
     message = Column(Text)  # User's question/message
     response = Column(Text)  # AI's response
     message_type = Column(String, default="question")  # question, clarification, help
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=True)
     project_id = Column(Integer, ForeignKey("crochet_projects.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -59,6 +74,7 @@ class ChatMessage(Base):
     # Relationships
     user = relationship("User", back_populates="chat_messages")
     project = relationship("CrochetProject", back_populates="chat_messages")
+    conversation = relationship("Conversation", back_populates="chat_messages")
 
 class ProjectDiagram(Base):
     __tablename__ = "project_diagrams"

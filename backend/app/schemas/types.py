@@ -31,11 +31,21 @@ class CrochetProject:
     updated_at: datetime
 
 @strawberry.type
+class Conversation:
+    id: int
+    title: str
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    message_count: int
+
+@strawberry.type
 class ChatMessage:
     id: int
     message: str
     response: str
     message_type: str
+    conversation_id: Optional[int] = None
     project_id: Optional[int] = None
     user_id: int
     created_at: datetime
@@ -64,6 +74,14 @@ class RegisterInput:
 class LoginInput:
     email: str
     password: str
+
+@strawberry.input
+class CreateConversationInput:
+    title: Optional[str] = "New Chat"
+
+@strawberry.input
+class UpdateConversationInput:
+    title: Optional[str] = None
 
 @strawberry.input
 class CreateProjectInput:
