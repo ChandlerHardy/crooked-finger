@@ -1,9 +1,49 @@
 """YouTube transcript fetching service"""
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
+from youtube_transcript_api.proxies import GenericProxyConfig
 import re
 import time
+import os
+import logging
+import requests
 from typing import Optional, Dict, List
+
+logger = logging.getLogger(__name__)
+
+# Monkey-patch requests to add browser-like headers
+original_request = requests.Session.request
+
+def patched_request(self, method, url, **kwargs):
+    """Add browser-like headers to all requests"""
+    if 'headers' not in kwargs:
+        kwargs['headers'] = {}
+
+    # Add browser headers to mimic Chrome on macOS
+    default_headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Cache-Control': 'max-age=0',
+    }
+
+    # Only add headers that aren't already set
+    for key, value in default_headers.items():
+        if key not in kwargs['headers']:
+            kwargs['headers'][key] = value
+
+    return original_request(self, method, url, **kwargs)
+
+# Apply the monkey patch
+requests.Session.request = patched_request
 
 
 class YouTubeService:
@@ -90,8 +130,23 @@ class YouTubeService:
                 time.sleep(YouTubeService._min_request_interval - time_since_last_request)
 
             # Fetch transcript using new API (v1.2.2+)
-            api = YouTubeTranscriptApi()
+            # Use proxy if configured via environment variables to avoid IP blocking
+            proxy_config = None
+            proxy_url = os.getenv('YOUTUBE_PROXY_URL')
+
+            if proxy_url:
+                logger.info(f"🔒 Using proxy: {proxy_url}")
+                proxy_config = GenericProxyConfig(
+                    http_url=proxy_url,
+                    https_url=proxy_url
+                )
+            else:
+                logger.info(f"⚠️ No proxy configured - using direct connection")
+
+            api = YouTubeTranscriptApi(proxy_config=proxy_config)
+            logger.info(f"🎬 Fetching transcript for video: {video_id}")
             transcript_result = api.fetch(video_id, languages=languages)
+            logger.info(f"✅ Transcript fetched successfully! Length: {len(transcript_result)}")
 
             # Update last request time
             YouTubeService._last_request_time = time.time()
