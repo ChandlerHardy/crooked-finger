@@ -19,7 +19,7 @@ from app.services.granny_square_service import granny_square_service
 from app.services.flowing_granny_service import flowing_granny_service
 from app.services.matplotlib_crochet_service import matplotlib_crochet_service
 from app.services.rag_service import rag_service
-from app.services.youtube_service import youtube_service
+from app.services.youtube_service_rapidapi import youtube_service_rapidapi
 import re
 from sqlalchemy.orm import Session
 
@@ -486,7 +486,7 @@ class Mutation:
     ) -> YouTubeTranscriptResponse:
         """Fetch transcript from a YouTube video"""
         try:
-            result = youtube_service.get_transcript(video_url, languages)
+            result = youtube_service_rapidapi.get_transcript(video_url, languages)
             return YouTubeTranscriptResponse(
                 success=result["success"],
                 video_id=result.get("video_id"),
