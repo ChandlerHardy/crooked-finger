@@ -124,6 +124,7 @@ class Mutation:
             db_project = models.CrochetProject(
                 name=input.name,
                 pattern_text=input.pattern_text,
+                translated_text=input.translated_text,
                 difficulty_level=input.difficulty_level,
                 estimated_time=input.estimated_time,
                 yarn_weight=input.yarn_weight,

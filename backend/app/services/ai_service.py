@@ -7,6 +7,8 @@ from app.core.config import settings
 from app.services.rag_service import rag_service
 from app.database.models import AIModelUsage
 from app.database.connection import SessionLocal
+import httpx
+import json
 
 class GeminiModel(Enum):
     """Available Gemini models with their daily limits and characteristics"""
@@ -38,7 +40,9 @@ class GeminiModel(Enum):
 class AIService:
     def __init__(self):
         self.gemini_api_key = settings.gemini_api_key
+        self.openrouter_api_key = getattr(settings, 'openrouter_api_key', None)
         self.client = None
+        self.use_openrouter_default = True  # Set to True for testing
 
     def _get_client(self):
         """Lazy initialization of Gemini client"""
@@ -187,6 +191,10 @@ class AIService:
         """
         Translate crochet pattern notation into readable instructions using best available model
         """
+        # Use OpenRouter if set as default for testing
+        if self.use_openrouter_default and self.openrouter_api_key:
+            return await self._translate_with_openrouter(pattern_text, user_context)
+
         client = self._get_client()
         if client:
             # Pattern translation is complex, prefer higher-tier models
@@ -198,6 +206,10 @@ class AIService:
         """
         Chat with AI about crochet patterns and techniques using best available model
         """
+        # Use OpenRouter if set as default for testing
+        if self.use_openrouter_default and self.openrouter_api_key:
+            return await self._chat_with_openrouter(message, project_context, chat_history)
+
         client = self._get_client()
         if client:
             # Determine complexity based on message content
@@ -347,6 +359,132 @@ Always be encouraging and provide practical, actionable advice."""
         except Exception as e:
             return f"Sorry, I'm having trouble responding right now: {str(e)}"
 
+
+    async def _translate_with_openrouter(self, pattern_text: str, context: str) -> str:
+        """Use OpenRouter Qwen3 30B for pattern translation"""
+        try:
+            system_prompt = """You are an expert crochet instructor. Your job is to translate standard crochet notation into clear, easy-to-follow instructions for beginners and intermediate crocheters.
+
+Rules for translation:
+- Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
+- Break down complex instructions into numbered steps
+- Explain stitch counts and placement clearly
+- Add helpful tips for tricky techniques
+- Use encouraging, friendly language
+- Include warnings about common mistakes"""
+
+            user_prompt = f"""Please translate this crochet pattern into clear, step-by-step instructions:
+
+PATTERN:
+{pattern_text}
+
+{f'CONTEXT: {context}' if context else ''}
+
+Provide detailed, beginner-friendly instructions."""
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openrouter_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "qwen/qwen3-30b-a3b:free",
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ]
+                    },
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                ai_response = result["choices"][0]["message"]["content"]
+
+                # Track usage
+                db = SessionLocal()
+                try:
+                    input_chars = len(system_prompt) + len(user_prompt)
+                    output_chars = len(ai_response)
+                    self._increment_usage(db, "qwen3-30b-a3b:free", input_chars, output_chars)
+                finally:
+                    db.close()
+
+                return f"[qwen3-30b-a3b:free] {ai_response}"
+
+        except Exception as e:
+            return f"Error with OpenRouter: {str(e)}"
+
+    async def _chat_with_openrouter(self, message: str, project_context: str, chat_history: str) -> str:
+        """Use OpenRouter Qwen3 30B for crochet chat"""
+        try:
+            # Use RAG to analyze user request and enhance context
+            user_analysis = rag_service.analyze_user_request(message)
+
+            system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
+- Crochet technique questions
+- Pattern interpretation and clarification
+- Troubleshooting common problems
+- Yarn and hook recommendations
+- Project planning and modifications
+- Stitch counting and pattern adjustments
+
+NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
+
+Always be encouraging and provide practical, actionable advice."""
+
+            # Enhance context with RAG if diagram is requested
+            context_info = ""
+            if project_context:
+                context_info += f"\nCURRENT PROJECT CONTEXT:\n{project_context}\n"
+            if chat_history:
+                context_info += f"\nPREVIOUS CONVERSATION:\n{chat_history}\n"
+
+            # Add RAG enhancement for diagram requests
+            if user_analysis['requests_diagram']:
+                pattern_text = message if any(pe in message.lower() for pe in ['round', 'row', 'chain', 'dc', 'sc']) else ""
+                if pattern_text:
+                    rag_enhancement = rag_service.enhance_pattern_context(pattern_text, message)
+                    context_info += f"\n{rag_enhancement}\n"
+
+            user_prompt = f"{context_info}\nUSER QUESTION: {message}"
+
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openrouter_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": "qwen/qwen3-30b-a3b:free",
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ]
+                    },
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                result = response.json()
+
+                ai_response = result["choices"][0]["message"]["content"]
+
+                # Track usage
+                db = SessionLocal()
+                try:
+                    input_chars = len(system_prompt) + len(user_prompt)
+                    output_chars = len(ai_response)
+                    self._increment_usage(db, "qwen3-30b-a3b:free", input_chars, output_chars)
+                finally:
+                    db.close()
+
+                return f"[qwen3-30b-a3b:free] {ai_response}"
+
+        except Exception as e:
+            return f"Sorry, I'm having trouble responding right now: {str(e)}"
 
     def _fallback_translation(self, pattern_text: str) -> str:
         """Basic pattern translation without AI"""

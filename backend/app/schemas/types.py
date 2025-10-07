@@ -87,6 +87,7 @@ class UpdateConversationInput:
 class CreateProjectInput:
     name: str
     pattern_text: Optional[str] = None
+    translated_text: Optional[str] = None
     difficulty_level: Optional[str] = None
     estimated_time: Optional[str] = None
     yarn_weight: Optional[str] = None

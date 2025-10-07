@@ -24,17 +24,14 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     ports:
       - "8001:8001"  # Different port from CryptAssist (8000)
     environment:
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
-      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ADMIN_SECRET=${ADMIN_SECRET:-change-this-in-production}
       - DATABASE_URL=postgresql://crochet_user:crochet_secure_password_2024@postgres:5432/crooked_finger_db
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
-      - ENVIRONMENT=${ENVIRONMENT:-production}
-      - DEBUG=${DEBUG:-false}
+      - ENVIRONMENT=production
+      - DEBUG=false
     restart: unless-stopped
     depends_on:
       postgres:
