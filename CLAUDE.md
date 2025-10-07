@@ -28,14 +28,14 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 
 ## ⚙️ Key Environment Variables
 **Backend (.env on OCI server):**
-- `GEMINI_API_KEY=AIzaSyDlKJxbfq93MThxC_CGUdZChDmaZPZ4vpg` (Google AI Studio API key)
+- `GEMINI_API_KEY=***` (Google AI Studio API key - DO NOT COMMIT)
 - `CORS_ORIGINS=https://crookedfinger.chandlerhardy.com,https://crooked-finger-app.vercel.app,https://backend.chandlerhardy.com,http://localhost:3000,http://localhost:3001`
-- `ADMIN_SECRET=change-this-in-production`
-- `DATABASE_URL=postgresql://crochet_user:crochet_password@postgres:5432/crooked_finger_db`
+- `ADMIN_SECRET=***` (DO NOT COMMIT)
+- `DATABASE_URL=postgresql://crochet_user:***@postgres:5432/crooked_finger_db`
 
 **Frontend (.env.local):**
 - `NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8001/crooked-finger/graphql`
-- `GEMINI_API_KEY=AIzaSyDlKJxbfq93MThxC_CGUdZChDmaZPZ4vpg`
+- `GEMINI_API_KEY=***` (DO NOT COMMIT - same as backend)
 
 **Frontend (Vercel):**
 - `NEXT_PUBLIC_GRAPHQL_URL=https://backend.chandlerhardy.com/crooked-finger/graphql`
