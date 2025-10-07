@@ -805,29 +805,50 @@ def _parse_pattern_response(ai_response: str) -> Optional[dict]:
     try:
         pattern_data = {}
 
-        # Extract fields using regex
-        name_match = re.search(r'NAME:\s*(.+?)(?:\n|$)', ai_response, re.IGNORECASE)
-        notation_match = re.search(r'NOTATION:\s*(.+?)(?=\nINSTRUCTIONS:|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        instructions_match = re.search(r'INSTRUCTIONS:\s*(.+?)(?=\nDIFFICULTY:|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        difficulty_match = re.search(r'DIFFICULTY:\s*(.+?)(?:\n|$)', ai_response, re.IGNORECASE)
-        materials_match = re.search(r'MATERIALS:\s*(.+?)(?=\nTIME:|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        time_match = re.search(r'TIME:\s*(.+?)(?:\n|$)', ai_response, re.IGNORECASE)
+        # Extract fields using regex - look for section headers at start of line
+        name_match = re.search(r'NAME:\s*(.+?)(?=\n\s*(?:NOTATION|INSTRUCTIONS|DIFFICULTY|MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        notation_match = re.search(r'NOTATION:\s*(.+?)(?=\n\s*(?:INSTRUCTIONS|DIFFICULTY|MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        instructions_match = re.search(r'INSTRUCTIONS:\s*(.+?)(?=\n\s*(?:DIFFICULTY|MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        difficulty_match = re.search(r'DIFFICULTY:\s*(.+?)(?=\n\s*(?:MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        materials_match = re.search(r'MATERIALS:\s*(.+?)(?=\n\s*TIME:|$)', ai_response, re.IGNORECASE | re.DOTALL)
+        time_match = re.search(r'TIME:\s*(.+?)$', ai_response, re.IGNORECASE | re.DOTALL)
 
         if name_match:
-            pattern_data["name"] = name_match.group(1).strip()
+            # Clean up name - should be single line only
+            name = name_match.group(1).strip()
+            # Take only first line if multiple lines captured
+            name = name.split('\n')[0].strip()
+            pattern_data["name"] = name
         if notation_match:
             pattern_data["notation"] = notation_match.group(1).strip()
         if instructions_match:
-            pattern_data["instructions"] = instructions_match.group(1).strip()
+            # Remove any duplicate content that might appear after the instructions
+            instructions = instructions_match.group(1).strip()
+            # If instructions appear to be duplicated (same content twice), take only first half
+            half_length = len(instructions) // 2
+            first_half = instructions[:half_length].strip()
+            second_half = instructions[half_length:].strip()
+            if first_half and second_half and first_half == second_half:
+                # Exact duplicate - use only first half
+                pattern_data["instructions"] = first_half
+            else:
+                pattern_data["instructions"] = instructions
         if difficulty_match:
             difficulty = difficulty_match.group(1).strip().lower()
-            # Validate difficulty
-            if difficulty in ['beginner', 'intermediate', 'advanced']:
-                pattern_data["difficulty"] = difficulty
+            # Take only first line
+            difficulty = difficulty.split('\n')[0].strip()
+            # Extract just the difficulty word, ignore any extra text
+            for level in ['beginner', 'intermediate', 'advanced']:
+                if level in difficulty:
+                    pattern_data["difficulty"] = level
+                    break
         if materials_match:
             pattern_data["materials"] = materials_match.group(1).strip()
         if time_match:
-            pattern_data["time"] = time_match.group(1).strip()
+            time = time_match.group(1).strip()
+            # Take only first line
+            time = time.split('\n')[0].strip()
+            pattern_data["time"] = time
 
         # Return pattern data if at least name and notation are found
         if pattern_data.get("name") and pattern_data.get("notation"):
