@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Date, JSON
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
@@ -100,5 +100,15 @@ class AIModelUsage(Base):
     total_input_tokens = Column(Integer, default=0)  # Estimated input tokens (chars / 4)
     total_output_tokens = Column(Integer, default=0)  # Estimated output tokens (chars / 4)
     date = Column(Date, default=date.today, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class AIModelConfig(Base):
+    __tablename__ = "ai_model_config"
+
+    id = Column(Integer, primary_key=True, index=True)
+    selected_model = Column(String, nullable=True)  # Specific model or None for smart routing
+    model_priority_order = Column(JSON, default=list)  # List of models for fallback chain
+    provider_preference = Column(String, default="auto")  # "openrouter", "gemini", or "auto"
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

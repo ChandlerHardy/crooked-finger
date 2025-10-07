@@ -38,11 +38,83 @@ class GeminiModel(Enum):
     }
 
 class AIService:
+    # All available models
+    ALL_AVAILABLE_MODELS = {
+        # OpenRouter free models
+        "deepseek/deepseek-chat-v3.1:free": {"provider": "openrouter", "name": "DeepSeek Chat v3.1", "cost": "free"},
+        "qwen/qwen3-30b-a3b:free": {"provider": "openrouter", "name": "Qwen3 30B A3B (Often Unavailable)", "cost": "free"},
+        # Gemini models
+        "gemini-2.5-pro": {"provider": "gemini", "name": "Gemini 2.5 Pro", "daily_limit": 100},
+        "gemini-2.5-flash-preview-09-2025": {"provider": "gemini", "name": "Gemini 2.5 Flash Preview", "daily_limit": 250},
+        "gemini-2.5-flash": {"provider": "gemini", "name": "Gemini 2.5 Flash", "daily_limit": 250},
+        "gemini-2.5-flash-lite": {"provider": "gemini", "name": "Gemini 2.5 Flash Lite", "daily_limit": 1000},
+    }
+
+    # Default OpenRouter model priority (will try in order)
+    # Note: Qwen removed from default as it's frequently unavailable (503 errors)
+    DEFAULT_OPENROUTER_MODELS = [
+        "deepseek/deepseek-chat-v3.1:free",  # Primary: DeepSeek v3.1 (unlimited, reliable)
+    ]
+
     def __init__(self):
         self.gemini_api_key = settings.gemini_api_key
         self.openrouter_api_key = getattr(settings, 'openrouter_api_key', None)
         self.client = None
-        self.use_openrouter_default = True  # Set to True for testing
+
+        # Load persisted configuration from database
+        self._load_config_from_db()
+
+        # If no config in DB, use defaults
+        if not hasattr(self, '_selected_model'):
+            self.use_openrouter_default = False  # Don't default to OpenRouter
+            self._ai_provider_preference = "auto"  # "openrouter", "gemini", or "auto"
+            self._selected_model = None  # Specific model or None for smart routing
+            self._model_priority_order = []  # Empty = smart routing, not fallback
+
+    def _load_config_from_db(self):
+        """Load AI model configuration from database"""
+        from app.database.models import AIModelConfig
+        db = SessionLocal()
+        try:
+            config = db.query(AIModelConfig).first()
+            if config:
+                self._selected_model = config.selected_model
+                self._model_priority_order = config.model_priority_order or []
+                self._ai_provider_preference = config.provider_preference or "auto"
+
+                # Set use_openrouter_default based on configuration
+                if self._selected_model:
+                    model_info = self.ALL_AVAILABLE_MODELS.get(self._selected_model)
+                    self.use_openrouter_default = model_info and model_info["provider"] == "openrouter"
+                elif self._model_priority_order:
+                    self.use_openrouter_default = True
+                else:
+                    self.use_openrouter_default = False
+        except Exception as e:
+            # Table may not exist yet (before migration runs)
+            print(f"Could not load AI config from database (table may not exist yet): {e}")
+            pass
+        finally:
+            db.close()
+
+    def _save_config_to_db(self):
+        """Save AI model configuration to database"""
+        from app.database.models import AIModelConfig
+        db = SessionLocal()
+        try:
+            config = db.query(AIModelConfig).first()
+            if not config:
+                config = AIModelConfig()
+                db.add(config)
+
+            config.selected_model = self._selected_model
+            config.model_priority_order = self._model_priority_order
+            config.provider_preference = self._ai_provider_preference
+            config.updated_at = datetime.utcnow()
+
+            db.commit()
+        finally:
+            db.close()
 
     def _get_client(self):
         """Lazy initialization of Gemini client"""
@@ -160,6 +232,7 @@ class AIService:
             today = date.today()
             stats = {}
 
+            # Add Gemini models
             for model in GeminiModel:
                 model_name = model.value["name"]
                 usage_record = db.query(AIModelUsage).filter(
@@ -183,36 +256,77 @@ class AIService:
                     "total_output_tokens": usage_record.total_output_tokens if usage_record else 0,
                 }
 
+            # Add OpenRouter models (unlimited, so always show as available)
+            for model_name, info in self.ALL_AVAILABLE_MODELS.items():
+                if info["provider"] == "openrouter":
+                    usage_record = db.query(AIModelUsage).filter(
+                        AIModelUsage.model_name == model_name,
+                        AIModelUsage.date == today
+                    ).first()
+
+                    current_usage = usage_record.request_count if usage_record else 0
+
+                    stats[model_name] = {
+                        "current_usage": current_usage,
+                        "daily_limit": 999999,  # Unlimited
+                        "remaining": 999999,
+                        "percentage_used": 0,
+                        "priority": 0,
+                        "use_case": "unlimited",
+                        "total_input_characters": usage_record.total_input_characters if usage_record else 0,
+                        "total_output_characters": usage_record.total_output_characters if usage_record else 0,
+                        "total_input_tokens": usage_record.total_input_tokens if usage_record else 0,
+                        "total_output_tokens": usage_record.total_output_tokens if usage_record else 0,
+                    }
+
             return stats
         finally:
             db.close()
 
     async def translate_crochet_pattern(self, pattern_text: str, user_context: str = "") -> str:
         """
-        Translate crochet pattern notation into readable instructions using best available model
+        Translate crochet pattern notation into readable instructions using configured model
         """
-        # Use OpenRouter if set as default for testing
-        if self.use_openrouter_default and self.openrouter_api_key:
+        # If specific model is selected, use it directly
+        if self._selected_model:
+            model_info = self.ALL_AVAILABLE_MODELS.get(self._selected_model)
+            if model_info:
+                if model_info["provider"] == "openrouter":
+                    return await self._translate_with_specific_openrouter_model(pattern_text, user_context, self._selected_model)
+                elif model_info["provider"] == "gemini":
+                    return await self._translate_with_specific_gemini_model(pattern_text, user_context, self._selected_model)
+
+        # If fallback chain is configured (non-empty priority order), use it
+        if self._model_priority_order:
             return await self._translate_with_openrouter(pattern_text, user_context)
 
+        # Smart routing: Pattern translation is complex, prefer higher-tier models
         client = self._get_client()
         if client:
-            # Pattern translation is complex, prefer higher-tier models
             return await self._translate_with_gemini(pattern_text, user_context, complexity="complex")
         else:
             return self._fallback_translation(pattern_text)
 
     async def chat_about_pattern(self, message: str, project_context: str = "", chat_history: str = "") -> str:
         """
-        Chat with AI about crochet patterns and techniques using best available model
+        Chat with AI about crochet patterns and techniques using configured model
         """
-        # Use OpenRouter if set as default for testing
-        if self.use_openrouter_default and self.openrouter_api_key:
+        # If specific model is selected, use it directly
+        if self._selected_model:
+            model_info = self.ALL_AVAILABLE_MODELS.get(self._selected_model)
+            if model_info:
+                if model_info["provider"] == "openrouter":
+                    return await self._chat_with_specific_openrouter_model(message, project_context, chat_history, self._selected_model)
+                elif model_info["provider"] == "gemini":
+                    return await self._chat_with_specific_gemini_model(message, project_context, chat_history, self._selected_model)
+
+        # If fallback chain is configured (non-empty priority order), use it
+        if self._model_priority_order:
             return await self._chat_with_openrouter(message, project_context, chat_history)
 
+        # Smart routing: use complexity-based selection
         client = self._get_client()
         if client:
-            # Determine complexity based on message content
             complexity = self._analyze_message_complexity(message)
             return await self._chat_with_gemini(message, project_context, chat_history, complexity=complexity)
         else:
@@ -361,9 +475,8 @@ Always be encouraging and provide practical, actionable advice."""
 
 
     async def _translate_with_openrouter(self, pattern_text: str, context: str) -> str:
-        """Use OpenRouter Qwen3 30B for pattern translation"""
-        try:
-            system_prompt = """You are an expert crochet instructor. Your job is to translate standard crochet notation into clear, easy-to-follow instructions for beginners and intermediate crocheters.
+        """Use OpenRouter models for pattern translation with fallback"""
+        system_prompt = """You are an expert crochet instructor. Your job is to translate standard crochet notation into clear, easy-to-follow instructions for beginners and intermediate crocheters.
 
 Rules for translation:
 - Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
@@ -373,7 +486,7 @@ Rules for translation:
 - Use encouraging, friendly language
 - Include warnings about common mistakes"""
 
-            user_prompt = f"""Please translate this crochet pattern into clear, step-by-step instructions:
+        user_prompt = f"""Please translate this crochet pattern into clear, step-by-step instructions:
 
 PATTERN:
 {pattern_text}
@@ -382,48 +495,56 @@ PATTERN:
 
 Provide detailed, beginner-friendly instructions."""
 
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.openrouter_api_key}",
-                        "Content-Type": "application/json"
-                    },
-                    json={
-                        "model": "qwen/qwen3-30b-a3b:free",
-                        "messages": [
-                            {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_prompt}
-                        ]
-                    },
-                    timeout=30.0
-                )
-                response.raise_for_status()
-                result = response.json()
+        # Try each model in configured priority order
+        last_error = None
+        for model_name in self._model_priority_order:
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {self.openrouter_api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": model_name,
+                            "messages": [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt}
+                            ]
+                        },
+                        timeout=30.0
+                    )
+                    response.raise_for_status()
+                    result = response.json()
 
-                ai_response = result["choices"][0]["message"]["content"]
+                    ai_response = result["choices"][0]["message"]["content"]
 
-                # Track usage
-                db = SessionLocal()
-                try:
-                    input_chars = len(system_prompt) + len(user_prompt)
-                    output_chars = len(ai_response)
-                    self._increment_usage(db, "qwen3-30b-a3b:free", input_chars, output_chars)
-                finally:
-                    db.close()
+                    # Track usage
+                    db = SessionLocal()
+                    try:
+                        input_chars = len(system_prompt) + len(user_prompt)
+                        output_chars = len(ai_response)
+                        self._increment_usage(db, model_name, input_chars, output_chars)
+                    finally:
+                        db.close()
 
-                return f"[qwen3-30b-a3b:free] {ai_response}"
+                    return f"[{model_name}] {ai_response}"
 
-        except Exception as e:
-            return f"Error with OpenRouter: {str(e)}"
+            except Exception as e:
+                last_error = e
+                print(f"OpenRouter model {model_name} failed: {e}, trying next model...")
+                continue
+
+        # All models failed
+        return f"Error with OpenRouter (all models failed): {str(last_error)}"
 
     async def _chat_with_openrouter(self, message: str, project_context: str, chat_history: str) -> str:
-        """Use OpenRouter Qwen3 30B for crochet chat"""
-        try:
-            # Use RAG to analyze user request and enhance context
-            user_analysis = rag_service.analyze_user_request(message)
+        """Use OpenRouter models for crochet chat with fallback"""
+        # Use RAG to analyze user request and enhance context
+        user_analysis = rag_service.analyze_user_request(message)
 
-            system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
+        system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
 - Crochet technique questions
 - Pattern interpretation and clarification
 - Troubleshooting common problems
@@ -435,22 +556,86 @@ NOTE: Diagram generation is temporarily disabled. When users ask for visual diag
 
 Always be encouraging and provide practical, actionable advice."""
 
-            # Enhance context with RAG if diagram is requested
-            context_info = ""
-            if project_context:
-                context_info += f"\nCURRENT PROJECT CONTEXT:\n{project_context}\n"
-            if chat_history:
-                context_info += f"\nPREVIOUS CONVERSATION:\n{chat_history}\n"
+        # Enhance context with RAG if diagram is requested
+        context_info = ""
+        if project_context:
+            context_info += f"\nCURRENT PROJECT CONTEXT:\n{project_context}\n"
+        if chat_history:
+            context_info += f"\nPREVIOUS CONVERSATION:\n{chat_history}\n"
 
-            # Add RAG enhancement for diagram requests
-            if user_analysis['requests_diagram']:
-                pattern_text = message if any(pe in message.lower() for pe in ['round', 'row', 'chain', 'dc', 'sc']) else ""
-                if pattern_text:
-                    rag_enhancement = rag_service.enhance_pattern_context(pattern_text, message)
-                    context_info += f"\n{rag_enhancement}\n"
+        # Add RAG enhancement for diagram requests
+        if user_analysis['requests_diagram']:
+            pattern_text = message if any(pe in message.lower() for pe in ['round', 'row', 'chain', 'dc', 'sc']) else ""
+            if pattern_text:
+                rag_enhancement = rag_service.enhance_pattern_context(pattern_text, message)
+                context_info += f"\n{rag_enhancement}\n"
 
-            user_prompt = f"{context_info}\nUSER QUESTION: {message}"
+        user_prompt = f"{context_info}\nUSER QUESTION: {message}"
 
+        # Try each model in configured priority order
+        last_error = None
+        for model_name in self._model_priority_order:
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        headers={
+                            "Authorization": f"Bearer {self.openrouter_api_key}",
+                            "Content-Type": "application/json"
+                        },
+                        json={
+                            "model": model_name,
+                            "messages": [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt}
+                            ]
+                        },
+                        timeout=30.0
+                    )
+                    response.raise_for_status()
+                    result = response.json()
+
+                    ai_response = result["choices"][0]["message"]["content"]
+
+                    # Track usage
+                    db = SessionLocal()
+                    try:
+                        input_chars = len(system_prompt) + len(user_prompt)
+                        output_chars = len(ai_response)
+                        self._increment_usage(db, model_name, input_chars, output_chars)
+                    finally:
+                        db.close()
+
+                    return f"[{model_name}] {ai_response}"
+
+            except Exception as e:
+                last_error = e
+                print(f"OpenRouter model {model_name} failed: {e}, trying next model...")
+                continue
+
+        # All models failed
+        return f"Sorry, I'm having trouble responding right now: {str(last_error)}"
+
+    async def _translate_with_specific_openrouter_model(self, pattern_text: str, user_context: str, model_name: str) -> str:
+        """Translate pattern using a specific OpenRouter model"""
+        system_prompt = """You are an expert crochet pattern translator. Convert abbreviated crochet patterns into clear, readable instructions.
+
+Key responsibilities:
+- Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
+- Explain stitch placement and technique
+- Maintain the original pattern structure (rounds/rows)
+- Provide context for complex stitches
+- Be precise with stitch counts and placement"""
+
+        user_prompt = f"""Translate this crochet pattern into clear instructions:
+
+{pattern_text}
+
+{f'Additional context: {user_context}' if user_context else ''}
+
+Provide a clear, step-by-step translation."""
+
+        try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
@@ -459,32 +644,225 @@ Always be encouraging and provide practical, actionable advice."""
                         "Content-Type": "application/json"
                     },
                     json={
-                        "model": "qwen/qwen3-30b-a3b:free",
+                        "model": model_name,
                         "messages": [
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_prompt}
                         ]
                     },
-                    timeout=30.0
+                    timeout=60.0
                 )
                 response.raise_for_status()
                 result = response.json()
-
-                ai_response = result["choices"][0]["message"]["content"]
+                ai_response = result['choices'][0]['message']['content']
 
                 # Track usage
+                input_chars = len(system_prompt) + len(user_prompt)
+                output_chars = len(ai_response)
                 db = SessionLocal()
                 try:
-                    input_chars = len(system_prompt) + len(user_prompt)
-                    output_chars = len(ai_response)
-                    self._increment_usage(db, "qwen3-30b-a3b:free", input_chars, output_chars)
+                    self._increment_usage(db, model_name, input_chars, output_chars)
                 finally:
                     db.close()
 
-                return f"[qwen3-30b-a3b:free] {ai_response}"
+                return ai_response
 
         except Exception as e:
-            return f"Sorry, I'm having trouble responding right now: {str(e)}"
+            error_msg = str(e)
+            if "503" in error_msg:
+                return f"The {model_name} model is currently unavailable. Please try a different model."
+            elif "429" in error_msg:
+                return f"Rate limit reached for {model_name}. Please try a different model or wait a few minutes."
+            else:
+                return f"Translation failed with {model_name}: {error_msg}"
+
+    async def _translate_with_specific_gemini_model(self, pattern_text: str, user_context: str, model_name: str) -> str:
+        """Translate pattern using a specific Gemini model"""
+        system_instruction = """You are an expert crochet pattern translator. Convert abbreviated crochet patterns into clear, readable instructions.
+
+Key responsibilities:
+- Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
+- Explain stitch placement and technique
+- Maintain the original pattern structure (rounds/rows)
+- Provide context for complex stitches
+- Be precise with stitch counts and placement"""
+
+        user_prompt = f"""Translate this crochet pattern into clear instructions:
+
+{pattern_text}
+
+{f'Additional context: {user_context}' if user_context else ''}
+
+Provide a clear, step-by-step translation."""
+
+        try:
+            client = self._get_client()
+            if not client:
+                return "Gemini client not configured"
+
+            response = client.models.generate_content(
+                model=model_name,
+                contents=user_prompt,
+                config={
+                    "system_instruction": system_instruction,
+                    "temperature": 0.3,
+                }
+            )
+
+            ai_response = response.text
+
+            # Track usage
+            input_chars = len(system_instruction) + len(user_prompt)
+            output_chars = len(ai_response)
+            db = SessionLocal()
+            try:
+                self._increment_usage(db, model_name, input_chars, output_chars)
+            finally:
+                db.close()
+
+            return ai_response
+
+        except Exception as e:
+            error_msg = str(e)
+            if "429" in error_msg or "quota" in error_msg.lower():
+                return f"Daily quota reached for {model_name}. Please try a different model or wait until tomorrow."
+            else:
+                return f"Translation failed with {model_name}: {error_msg}"
+
+    async def _chat_with_specific_openrouter_model(self, message: str, project_context: str, chat_history: str, model_name: str) -> str:
+        """Chat using a specific OpenRouter model"""
+        user_analysis = rag_service.analyze_user_request(message)
+
+        system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
+- Crochet technique questions
+- Pattern interpretation and clarification
+- Troubleshooting common problems
+- Yarn and hook recommendations
+- Project planning and modifications
+- Stitch counting and pattern adjustments
+
+NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
+
+Always be encouraging and provide practical, actionable advice."""
+
+        context_info = ""
+        if project_context:
+            context_info += f"\nCURRENT PROJECT CONTEXT:\n{project_context}\n"
+        if chat_history:
+            context_info += f"\nPREVIOUS CONVERSATION:\n{chat_history}\n"
+
+        if user_analysis['requests_diagram']:
+            pattern_text = message if any(pe in message.lower() for pe in ['round', 'row', 'chain', 'dc', 'sc']) else ""
+            if pattern_text:
+                rag_enhancement = rag_service.enhance_pattern_context(pattern_text, message)
+                context_info += f"\n{rag_enhancement}\n"
+
+        user_prompt = f"{context_info}\nUSER QUESTION: {message}"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openrouter_api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json={
+                        "model": model_name,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ]
+                    },
+                    timeout=60.0
+                )
+                response.raise_for_status()
+                result = response.json()
+                ai_response = result['choices'][0]['message']['content']
+
+                # Track usage
+                input_chars = len(system_prompt) + len(user_prompt)
+                output_chars = len(ai_response)
+                db = SessionLocal()
+                try:
+                    self._increment_usage(db, model_name, input_chars, output_chars)
+                finally:
+                    db.close()
+
+                return f"[{model_name}] {ai_response}"
+
+        except Exception as e:
+            error_msg = str(e)
+            if "503" in error_msg:
+                return f"The {model_name} model is currently unavailable (service overloaded). Please try a different model or use Smart Routing for automatic fallback."
+            elif "429" in error_msg:
+                return f"Rate limit reached for {model_name}. Please try a different model or wait a few minutes."
+            else:
+                return f"Sorry, model {model_name} failed: {error_msg}"
+
+    async def _chat_with_specific_gemini_model(self, message: str, project_context: str, chat_history: str, model_name: str) -> str:
+        """Chat using a specific Gemini model"""
+        user_analysis = rag_service.analyze_user_request(message)
+
+        system_instruction = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
+- Crochet technique questions
+- Pattern interpretation and clarification
+- Troubleshooting common problems
+- Yarn and hook recommendations
+- Project planning and modifications
+- Stitch counting and pattern adjustments
+
+NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
+
+Always be encouraging and provide practical, actionable advice."""
+
+        context_info = ""
+        if project_context:
+            context_info += f"\nCURRENT PROJECT CONTEXT:\n{project_context}\n"
+        if chat_history:
+            context_info += f"\nPREVIOUS CONVERSATION:\n{chat_history}\n"
+
+        if user_analysis['requests_diagram']:
+            pattern_text = message if any(pe in message.lower() for pe in ['round', 'row', 'chain', 'dc', 'sc']) else ""
+            if pattern_text:
+                rag_enhancement = rag_service.enhance_pattern_context(pattern_text, message)
+                context_info += f"\n{rag_enhancement}\n"
+
+        user_prompt = f"{context_info}\nUSER QUESTION: {message}"
+
+        try:
+            client = self._get_client()
+            if not client:
+                return "Gemini client not configured"
+
+            response = client.models.generate_content(
+                model=model_name,
+                contents=user_prompt,
+                config={
+                    "system_instruction": system_instruction,
+                    "temperature": 0.7,
+                }
+            )
+
+            ai_response = response.text
+
+            # Track usage
+            input_chars = len(system_instruction) + len(user_prompt)
+            output_chars = len(ai_response)
+            db = SessionLocal()
+            try:
+                self._increment_usage(db, model_name, input_chars, output_chars)
+            finally:
+                db.close()
+
+            return f"[{model_name}] {ai_response}"
+
+        except Exception as e:
+            error_msg = str(e)
+            if "429" in error_msg or "quota" in error_msg.lower():
+                return f"Daily quota reached for {model_name}. Please try a different model or wait until tomorrow."
+            else:
+                return f"Sorry, model {model_name} failed: {error_msg}"
 
     def _fallback_translation(self, pattern_text: str) -> str:
         """Basic pattern translation without AI"""
@@ -514,6 +892,79 @@ Always be encouraging and provide practical, actionable advice."""
             translated = translated.replace(abbrev, full_form)
 
         return f"Basic translation (AI not available):\n\n{translated}\n\nNote: This is a simple translation. For detailed instructions, please configure AI service."
+
+    def get_ai_provider_config(self) -> Dict[str, Any]:
+        """Get current AI provider configuration"""
+        return {
+            "use_openrouter": self.use_openrouter_default,
+            "current_provider": self._ai_provider_preference,
+            "selected_model": self._selected_model,
+            "available_models": list(self.ALL_AVAILABLE_MODELS.keys()),
+            "model_priority_order": self._model_priority_order
+        }
+
+    def set_ai_model(self, model_name: Optional[str] = None, priority_order: Optional[list] = None) -> Dict[str, Any]:
+        """
+        Set AI model configuration
+        Three modes:
+        1. Single Model: model_name is set
+        2. Smart Routing: model_name=None, priority_order=None (complexity-based selection)
+        3. Fallback Chain: model_name=None, priority_order=[...] (try in order until success)
+
+        Args:
+            model_name: Specific model to use, or None for smart/fallback routing
+            priority_order: Custom priority order for fallback chain, or None for smart routing
+        """
+        # Validate model if specified
+        if model_name and model_name not in self.ALL_AVAILABLE_MODELS:
+            return {
+                "success": False,
+                "message": f"Invalid model: {model_name}. Available models: {list(self.ALL_AVAILABLE_MODELS.keys())}"
+            }
+
+        # Set model selection
+        self._selected_model = model_name
+
+        # Handle three distinct modes
+        if model_name:
+            # Mode 1: Single Model
+            model_info = self.ALL_AVAILABLE_MODELS[model_name]
+            if model_info["provider"] == "openrouter":
+                self._ai_provider_preference = "openrouter"
+                self.use_openrouter_default = True
+            elif model_info["provider"] == "gemini":
+                self._ai_provider_preference = "gemini"
+                self.use_openrouter_default = False
+            mode_description = f"Single Model: {model_name}"
+        elif priority_order:
+            # Mode 3: Fallback Chain
+            # Validate priority order
+            for model in priority_order:
+                if model not in self.ALL_AVAILABLE_MODELS:
+                    return {
+                        "success": False,
+                        "message": f"Invalid model in priority order: {model}"
+                    }
+            self._model_priority_order = priority_order
+            self._ai_provider_preference = "auto"
+            mode_description = f"Fallback Chain ({len(priority_order)} models)"
+        else:
+            # Mode 2: Smart Routing (complexity-based)
+            self._model_priority_order = []  # Clear priority order for smart routing
+            self._ai_provider_preference = "auto"
+            mode_description = "Smart Routing (Complexity-Based)"
+
+        # Persist configuration to database
+        self._save_config_to_db()
+
+        return {
+            "success": True,
+            "message": f"AI model configuration updated. Mode: {mode_description}",
+            "use_openrouter": self.use_openrouter_default,
+            "current_provider": self._ai_provider_preference,
+            "selected_model": self._selected_model,
+            "model_priority_order": self._model_priority_order
+        }
 
 # Global instance
 ai_service = AIService()

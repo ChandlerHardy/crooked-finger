@@ -7,7 +7,8 @@ from app.database import models
 from app.schemas.types import (
     User, AuthResponse, CrochetProject, Conversation, ChatResponse, ResetUsageResponse,
     YouTubeTranscriptResponse, ExtractedPattern, RegisterInput, LoginInput,
-    CreateProjectInput, UpdateProjectInput, CreateConversationInput, UpdateConversationInput
+    CreateProjectInput, UpdateProjectInput, CreateConversationInput, UpdateConversationInput,
+    AIProviderConfig
 )
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
@@ -478,6 +479,38 @@ class Mutation:
                 message=f"Failed to reset usage: {str(e)}",
                 reset_date=None
             )
+
+    @strawberry.field
+    async def set_ai_model(
+        self,
+        model_name: Optional[str] = None,
+        priority_order: Optional[list[str]] = None
+    ) -> AIProviderConfig:
+        """
+        Configure AI model selection
+        Args:
+            model_name: Specific model to use (e.g., "deepseek/deepseek-chat-v3.1:free"), or None for smart routing
+            priority_order: Custom fallback order for models (for smart routing mode)
+        """
+        result = ai_service.set_ai_model(model_name=model_name, priority_order=priority_order)
+
+        if not result["success"]:
+            # Return error in config format
+            return AIProviderConfig(
+                use_openrouter=False,
+                current_provider="error",
+                selected_model=None,
+                available_models=[],
+                model_priority_order=[]
+            )
+
+        return AIProviderConfig(
+            use_openrouter=result["use_openrouter"],
+            current_provider=result["current_provider"],
+            selected_model=result.get("selected_model"),
+            available_models=result.get("available_models", []),
+            model_priority_order=result.get("model_priority_order", [])
+        )
 
     @strawberry.field
     async def fetch_youtube_transcript(

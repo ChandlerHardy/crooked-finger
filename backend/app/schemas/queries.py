@@ -3,7 +3,7 @@ from typing import List, Optional
 from strawberry.types import Info
 from app.database.connection import get_db
 from app.database import models
-from app.schemas.types import User, CrochetProject, Conversation, ChatMessage, ProjectDiagram, AIUsageDashboard, ModelUsageStats
+from app.schemas.types import User, CrochetProject, Conversation, ChatMessage, ProjectDiagram, AIUsageDashboard, ModelUsageStats, AIProviderConfig
 from app.services.ai_service import ai_service
 
 @strawberry.type
@@ -94,10 +94,11 @@ class Query:
     def chat_messages(
         self,
         info: Info,
+        conversation_id: Optional[int] = None,
         project_id: Optional[int] = None,
         limit: int = 100
     ) -> List[ChatMessage]:
-        """Get chat messages, optionally filtered by project"""
+        """Get chat messages, optionally filtered by conversation or project"""
         user = info.context.get("user")
         if not user:
             return []
@@ -108,11 +109,14 @@ class Query:
                 models.ChatMessage.user_id == user.id
             )
 
+            if conversation_id:
+                query = query.filter(models.ChatMessage.conversation_id == conversation_id)
+
             if project_id:
                 query = query.filter(models.ChatMessage.project_id == project_id)
 
             chat_messages = query.order_by(
-                models.ChatMessage.created_at.desc()
+                models.ChatMessage.created_at.asc()  # Changed to asc for chronological order
             ).limit(limit).all()
 
             return [
@@ -121,6 +125,7 @@ class Query:
                     message=msg.message,
                     response=msg.response,
                     message_type=msg.message_type,
+                    conversation_id=msg.conversation_id,
                     project_id=msg.project_id,
                     user_id=msg.user_id,
                     created_at=msg.created_at
@@ -231,10 +236,24 @@ class Query:
                 total_output_tokens=data["total_output_tokens"]
             ))
             total_requests += data["current_usage"]
-            total_remaining += data["remaining"]
+            # Only count limited models in total remaining (exclude unlimited with 999999 limit)
+            if data["daily_limit"] < 999999:
+                total_remaining += data["remaining"]
 
         return AIUsageDashboard(
             total_requests_today=total_requests,
             total_remaining=total_remaining,
             models=model_stats
+        )
+
+    @strawberry.field
+    def ai_provider_config(self) -> AIProviderConfig:
+        """Get current AI provider configuration"""
+        config = ai_service.get_ai_provider_config()
+        return AIProviderConfig(
+            use_openrouter=config["use_openrouter"],
+            current_provider=config["current_provider"],
+            selected_model=config.get("selected_model"),
+            available_models=config.get("available_models", []),
+            model_priority_order=config.get("model_priority_order", [])
         )
