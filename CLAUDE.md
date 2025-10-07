@@ -462,5 +462,41 @@ Both projects share the same nginx server with different paths:
 - X-Content-Type-Options: nosniff
 - TLS 1.2/1.3 only
 
+## 📝 Recent Updates
+
+### October 7, 2025 - Conversation Management & Pattern Parsing
+1. **Conversation Filtering** (`f101a15d`)
+   - Added `conversation_id` parameter to `chatMessages` query
+   - Changed message ordering to ascending (chronological)
+   - Added `AIModelConfig` database model for persisting AI config
+   - AI service now saves/loads configuration from database
+
+2. **YouTube Pattern Parsing Fix** (`d535ab54`)
+   - Fixed instruction duplication bug in YouTube transcript extraction
+   - Improved regex with lookahead patterns to prevent greedy matching
+   - Added first-line extraction for NAME, DIFFICULTY, and TIME fields
+   - Prevents entire pattern content from being captured in title field
+   - Location: `backend/app/schemas/mutations.py` `_parse_pattern_response()`
+
+### October 6, 2025 - AI Provider Diversification
+1. **OpenRouter Integration** (`52e28211`)
+   - Added OpenRouter API support with Qwen3-30B-A3B free model
+   - Bypasses Gemini quota limits with unlimited free API calls
+   - Implemented `_translate_with_openrouter()` and `_chat_with_openrouter()`
+   - Updated docker-compose to use `env_file` directive for secure API key management
+   - All API keys now loaded from `backend/.env` (not committed to git)
+
+2. **RapidAPI YouTube Service** (`ddcf0e53`)
+   - Replaced blocked `youtube-transcript-api` with RapidAPI service
+   - Fixed video ID regex extraction (removed double backslashes)
+   - Added HTML entity decoding for transcript text
+   - Free tier: 100 requests/month
+   - Works from production backend (no IP blocking)
+
+### October 5, 2025 - Conversation Backend Sync
+- Implemented conversation storage in PostgreSQL
+- Cross-platform chat history sync between web and iOS
+- Added conversation management mutations (create, update, delete)
+
 ---
-*Last Updated: October 5, 2025 - Conversation Backend Sync Complete*
+*Last Updated: October 7, 2025*
