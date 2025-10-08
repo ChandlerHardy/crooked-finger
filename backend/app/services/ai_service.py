@@ -307,28 +307,29 @@ class AIService:
         else:
             return self._fallback_translation(pattern_text)
 
-    async def chat_about_pattern(self, message: str, project_context: str = "", chat_history: str = "") -> str:
+    async def chat_about_pattern(self, message: str, project_context: str = "", chat_history: str = "", image_data: Optional[str] = None) -> str:
         """
         Chat with AI about crochet patterns and techniques using configured model
+        Supports image analysis when image_data is provided (JSON array of base64 strings)
         """
         # If specific model is selected, use it directly
         if self._selected_model:
             model_info = self.ALL_AVAILABLE_MODELS.get(self._selected_model)
             if model_info:
                 if model_info["provider"] == "openrouter":
-                    return await self._chat_with_specific_openrouter_model(message, project_context, chat_history, self._selected_model)
+                    return await self._chat_with_specific_openrouter_model(message, project_context, chat_history, self._selected_model, image_data)
                 elif model_info["provider"] == "gemini":
-                    return await self._chat_with_specific_gemini_model(message, project_context, chat_history, self._selected_model)
+                    return await self._chat_with_specific_gemini_model(message, project_context, chat_history, self._selected_model, image_data)
 
         # If fallback chain is configured (non-empty priority order), use it
         if self._model_priority_order:
-            return await self._chat_with_openrouter(message, project_context, chat_history)
+            return await self._chat_with_openrouter(message, project_context, chat_history, image_data)
 
         # Smart routing: use complexity-based selection
         client = self._get_client()
         if client:
             complexity = self._analyze_message_complexity(message)
-            return await self._chat_with_gemini(message, project_context, chat_history, complexity=complexity)
+            return await self._chat_with_gemini(message, project_context, chat_history, complexity=complexity, image_data=image_data)
         else:
             return "AI service not configured. Please set GEMINI_API_KEY."
 
@@ -407,8 +408,8 @@ Provide detailed, beginner-friendly instructions."""
         except Exception as e:
             return f"Error translating pattern: {str(e)}"
 
-    async def _chat_with_gemini(self, message: str, project_context: str, chat_history: str, complexity: str = "general") -> str:
-        """Use best available Gemini model for crochet chat with RAG enhancement"""
+    async def _chat_with_gemini(self, message: str, project_context: str, chat_history: str, complexity: str = "general", image_data: Optional[str] = None) -> str:
+        """Use best available Gemini model for crochet chat with RAG enhancement and image support"""
         try:
             # Select best available model
             selected_model = self._select_best_available_model(complexity)
@@ -428,6 +429,13 @@ Provide detailed, beginner-friendly instructions."""
 - Yarn and hook recommendations
 - Project planning and modifications
 - Stitch counting and pattern adjustments
+- Analyzing images of crochet patterns, stitches, and projects
+
+When users provide images of patterns or their work:
+- Carefully analyze the stitches, structure, and techniques shown
+- Identify any patterns or instructions visible in the image
+- Provide helpful feedback and suggestions
+- If a pattern is shown, help transcribe or explain it
 
 NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
 
@@ -454,9 +462,34 @@ Always be encouraging and provide practical, actionable advice."""
             combined_prompt = f"{system_prompt}\n\n{user_prompt}"
 
             client = self._get_client()
+
+            # Build contents array with text and images if provided
+            contents = []
+            if image_data:
+                # Parse JSON array of base64 images
+                import json
+                import base64
+                try:
+                    image_list = json.loads(image_data)
+                    # Add text first
+                    contents.append(combined_prompt)
+                    # Add each image
+                    for img_base64 in image_list:
+                        # Gemini expects image data as bytes
+                        img_bytes = base64.b64decode(img_base64)
+                        contents.append({
+                            "mime_type": "image/jpeg",
+                            "data": img_bytes
+                        })
+                except (json.JSONDecodeError, base64.binascii.Error) as e:
+                    print(f"Warning: Failed to parse image data: {e}")
+                    contents = [combined_prompt]
+            else:
+                contents = [combined_prompt]
+
             response = client.models.generate_content(
                 model=model_name,
-                contents=combined_prompt
+                contents=contents
             )
 
             # Track usage with character counts

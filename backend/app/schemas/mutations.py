@@ -406,9 +406,10 @@ class Mutation:
         info: Info,
         message: str,
         conversation_id: Optional[int] = None,
-        context: Optional[str] = None
+        context: Optional[str] = None,
+        image_data: Optional[str] = None
     ) -> ChatResponse:
-        """Enhanced chat with AI assistant that can generate pattern diagrams"""
+        """Enhanced chat with AI assistant that can generate pattern diagrams and analyze images"""
         user = info.context.get("user")
 
         db = next(get_db())
@@ -423,11 +424,12 @@ class Mutation:
             # Analyze user request for pattern type and diagram needs
             user_analysis = rag_service.analyze_user_request(message)
 
-            # Use the AI service to get response with chat history
+            # Use the AI service to get response with chat history and images
             ai_response = await ai_service.chat_about_pattern(
                 message=message,
                 project_context=context or "",
-                chat_history=chat_history
+                chat_history=chat_history,
+                image_data=image_data
             )
 
             # Check if the message or response contains pattern information
