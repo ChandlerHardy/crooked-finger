@@ -1,4 +1,5 @@
 from google import genai
+from google.genai import types
 from typing import Optional, Dict, Any
 from enum import Enum
 from datetime import date, datetime
@@ -9,6 +10,7 @@ from app.database.models import AIModelUsage
 from app.database.connection import SessionLocal
 import httpx
 import json
+import base64
 
 class GeminiModel(Enum):
     """Available Gemini models with their daily limits and characteristics"""
@@ -421,21 +423,42 @@ Provide detailed, beginner-friendly instructions."""
             # Use RAG to analyze user request and enhance context
             user_analysis = rag_service.analyze_user_request(message)
 
-            # Base system prompt
-            system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
+            # Enhanced system prompt for image analysis
+            if image_data:
+                system_prompt = """You are an expert crochet instructor and pattern designer. Analyze the image and extract the crochet pattern.
+
+Format your response EXACTLY like this example (do NOT use numbered lists):
+
+NAME: Cat's Cradle Blanket
+NOTATION: Foundation Chain: Ch 122. Row 1: Dc in 3rd ch from hook and in each ch across, ch 2, turn — 120 dc. Row 2: Dc in 1st st, *Fpdc around the next 2 sts, Bpdc around the next 2 sts; rep from * to last st, dc in last st, ch 2, turn.
+INSTRUCTIONS:
+Round 1: Make a magic ring. Chain 2, work 12 double crochet into the ring. Pull the ring tight and slip stitch to join.
+
+Round 2: Chain 2. Work 2 double crochet in each stitch around (24 stitches total). Slip stitch to join.
+
+Round 3: Chain 2. *Work 1 double crochet in the next stitch, then 2 double crochet in the following stitch.* Repeat from * to * around (36 stitches total). Slip stitch to join.
+
+DIFFICULTY: beginner
+MATERIALS: Worsted weight yarn (4), 5.5mm (I) crochet hook
+TIME: 2-3 hours
+
+CRITICAL FORMATTING RULES:
+- Do NOT number your response (no "1.", "2.", "3.")
+- Do NOT use markdown bold (**text**)
+- Put TWO line breaks between each round in INSTRUCTIONS
+- Write INSTRUCTIONS as complete sentences, not abbreviated notation
+- Separate each major section with blank lines
+- Use the exact header format: "NAME:", "NOTATION:", "INSTRUCTIONS:", etc."""
+            else:
+                system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
 - Crochet technique questions
 - Pattern interpretation and clarification
 - Troubleshooting common problems
 - Yarn and hook recommendations
 - Project planning and modifications
 - Stitch counting and pattern adjustments
-- Analyzing images of crochet patterns, stitches, and projects
 
-When users provide images of patterns or their work:
-- Carefully analyze the stitches, structure, and techniques shown
-- Identify any patterns or instructions visible in the image
-- Provide helpful feedback and suggestions
-- If a pattern is shown, help transcribe or explain it
+Format your responses with clear paragraph breaks for readability.
 
 NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
 
@@ -464,28 +487,24 @@ Always be encouraging and provide practical, actionable advice."""
             client = self._get_client()
 
             # Build contents array with text and images if provided
-            contents = []
             if image_data:
-                # Parse JSON array of base64 images
-                import json
-                import base64
                 try:
                     image_list = json.loads(image_data)
-                    # Add text first
-                    contents.append(combined_prompt)
-                    # Add each image
+                    # Create parts list with text and images
+                    parts = [combined_prompt]
                     for img_base64 in image_list:
-                        # Gemini expects image data as bytes
+                        # Gemini SDK expects Part objects with inline_data
                         img_bytes = base64.b64decode(img_base64)
-                        contents.append({
-                            "mime_type": "image/jpeg",
-                            "data": img_bytes
-                        })
+                        parts.append(types.Part.from_bytes(
+                            data=img_bytes,
+                            mime_type="image/jpeg"
+                        ))
+                    contents = parts
                 except (json.JSONDecodeError, base64.binascii.Error) as e:
                     print(f"Warning: Failed to parse image data: {e}")
-                    contents = [combined_prompt]
+                    contents = combined_prompt
             else:
-                contents = [combined_prompt]
+                contents = combined_prompt
 
             response = client.models.generate_content(
                 model=model_name,
@@ -572,8 +591,11 @@ Provide detailed, beginner-friendly instructions."""
         # All models failed
         return f"Error with OpenRouter (all models failed): {str(last_error)}"
 
-    async def _chat_with_openrouter(self, message: str, project_context: str, chat_history: str) -> str:
-        """Use OpenRouter models for crochet chat with fallback"""
+    async def _chat_with_openrouter(self, message: str, project_context: str, chat_history: str, image_data: Optional[str] = None) -> str:
+        """Use OpenRouter models for crochet chat with fallback (image support not yet implemented)"""
+        # TODO: Add image support for OpenRouter models that support it
+        if image_data:
+            print("Warning: Image data provided but OpenRouter image support not yet implemented")
         # Use RAG to analyze user request and enhance context
         user_analysis = rag_service.analyze_user_request(message)
 
@@ -762,8 +784,11 @@ Provide a clear, step-by-step translation."""
             else:
                 return f"Translation failed with {model_name}: {error_msg}"
 
-    async def _chat_with_specific_openrouter_model(self, message: str, project_context: str, chat_history: str, model_name: str) -> str:
-        """Chat using a specific OpenRouter model"""
+    async def _chat_with_specific_openrouter_model(self, message: str, project_context: str, chat_history: str, model_name: str, image_data: Optional[str] = None) -> str:
+        """Chat using a specific OpenRouter model (image support not yet implemented)"""
+        # TODO: Add image support for OpenRouter models that support it
+        if image_data:
+            print("Warning: Image data provided but OpenRouter image support not yet implemented")
         user_analysis = rag_service.analyze_user_request(message)
 
         system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
@@ -833,17 +858,39 @@ Always be encouraging and provide practical, actionable advice."""
             else:
                 return f"Sorry, model {model_name} failed: {error_msg}"
 
-    async def _chat_with_specific_gemini_model(self, message: str, project_context: str, chat_history: str, model_name: str) -> str:
-        """Chat using a specific Gemini model"""
+    async def _chat_with_specific_gemini_model(self, message: str, project_context: str, chat_history: str, model_name: str, image_data: Optional[str] = None) -> str:
+        """Chat using a specific Gemini model with optional image support"""
         user_analysis = rag_service.analyze_user_request(message)
 
-        system_instruction = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
+        # Enhanced system instruction for image analysis
+        if image_data:
+            system_instruction = """You are an expert crochet instructor and pattern designer. When analyzing images of crochet patterns, provide:
+
+1. **Pattern Name**: A descriptive name for the pattern shown
+2. **Pattern Notation**: The abbreviated crochet notation (e.g., "ch 4, 12 dc in ring, sl st to join")
+3. **Detailed Instructions**: Step-by-step instructions in plain English with clear paragraph breaks between rounds/rows
+4. **Difficulty Level**: beginner, intermediate, or advanced
+5. **Materials**: Yarn weight, hook size, and other supplies needed
+6. **Estimated Time**: How long to complete (if determinable)
+7. **Special Notes**: Any unique techniques or tips
+
+Format your instructions with:
+- Clear paragraph breaks between each round/row
+- Numbered rounds/rows (e.g., "Round 1:", "Round 2:")
+- Double line breaks between sections
+- Bullet points for materials lists
+
+Be thorough, accurate, and encouraging. Focus on making the pattern easy to follow."""
+        else:
+            system_instruction = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
 - Crochet technique questions
 - Pattern interpretation and clarification
 - Troubleshooting common problems
 - Yarn and hook recommendations
 - Project planning and modifications
 - Stitch counting and pattern adjustments
+
+Format your responses with clear paragraph breaks for readability.
 
 NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
 
@@ -868,9 +915,29 @@ Always be encouraging and provide practical, actionable advice."""
             if not client:
                 return "Gemini client not configured"
 
+            # Build contents array with text and images if provided
+            if image_data:
+                try:
+                    image_list = json.loads(image_data)
+                    # Create parts list with text and images
+                    parts = [user_prompt]
+                    for img_base64 in image_list:
+                        # Gemini SDK expects Part objects with inline_data
+                        img_bytes = base64.b64decode(img_base64)
+                        parts.append(types.Part.from_bytes(
+                            data=img_bytes,
+                            mime_type="image/jpeg"
+                        ))
+                    contents = parts
+                except (json.JSONDecodeError, base64.binascii.Error) as e:
+                    print(f"Warning: Failed to parse image data: {e}")
+                    contents = user_prompt
+            else:
+                contents = user_prompt
+
             response = client.models.generate_content(
                 model=model_name,
-                contents=user_prompt,
+                contents=contents,
                 config={
                     "system_instruction": system_instruction,
                     "temperature": 0.7,
