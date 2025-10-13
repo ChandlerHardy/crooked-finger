@@ -10,6 +10,9 @@ import { ProjectDetailPage } from '../components/ProjectDetailPage';
 import { PatternLibrary } from '../components/PatternLibrary';
 import AIUsageDashboardComponent from '../components/AIUsageDashboard';
 import { YouTubeTest } from '../components/YouTubeTest';
+import { AuthModal } from '../components/AuthModal';
+import { AIModelSelector } from '../components/AIModelSelector';
+import { ConversationList } from '../components/ConversationList';
 
 interface Project {
   id: string;
@@ -69,6 +72,27 @@ export default function Home() {
   const [savedPatterns, setSavedPatterns] = useState<SavedPattern[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [user, setUser] = useState<{ id: string; username: string; email: string } | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Load auth state from localStorage on mount
+  useEffect(() => {
+    const loadAuthState = () => {
+      try {
+        const storedToken = localStorage.getItem('crooked-finger-token');
+        const storedUser = localStorage.getItem('crooked-finger-user');
+
+        if (storedToken && storedUser) {
+          setAuthToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        console.error('Error loading auth state:', error);
+      }
+    };
+    loadAuthState();
+  }, []);
 
   // Load saved patterns from localStorage on mount
   useEffect(() => {
@@ -261,7 +285,7 @@ Make 2.`,
     setCurrentPage('chat');
   };
 
-  const handleSendMessage = async (message: string) => {
+  const handleSendMessage = async (message: string, images?: string[]) => {
     // Create new conversation if none exists or none is active
     let conversationId = activeConversationId;
     if (!conversationId) {
@@ -308,15 +332,33 @@ Make 2.`,
     try {
       // Use fetch() directly for GraphQL call
       const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+
+      // Prepare variables with optional image data
+      const variables: Record<string, unknown> = {
+        message,
+        context: 'crochet_pattern_assistant',
+      };
+
+      // Convert images array to JSON string (matching iOS implementation)
+      if (images && images.length > 0) {
+        const base64Images = images.map(img => {
+          // Remove data URL prefix (e.g., "data:image/png;base64,")
+          return img.includes(',') ? img.split(',')[1] : img;
+        });
+        // Send as JSON string, not array - this matches iOS
+        variables.imageData = JSON.stringify(base64Images);
+      }
+
       const response = await fetch(graphqlUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({
           query: `
-            mutation ChatWithAssistantEnhanced($message: String!, $context: String) {
-              chatWithAssistantEnhanced(message: $message, context: $context) {
+            mutation ChatWithAssistantEnhanced($message: String!, $context: String, $imageData: String) {
+              chatWithAssistantEnhanced(message: $message, context: $context, imageData: $imageData) {
                 message
                 diagramSvg
                 diagramPng
@@ -324,10 +366,7 @@ Make 2.`,
               }
             }
           `,
-          variables: {
-            message,
-            context: 'crochet_pattern_assistant',
-          },
+          variables,
         }),
       });
 
@@ -358,7 +397,8 @@ Make 2.`,
         }));
       } else if (result.errors) {
         console.error('GraphQL errors:', result.errors);
-        throw new Error('GraphQL mutation not available');
+        console.error('Full error details:', JSON.stringify(result.errors, null, 2));
+        throw new Error(result.errors[0]?.message || 'GraphQL mutation not available');
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -462,9 +502,25 @@ Make 2.`,
     setSavedPatterns(prev =>
       prev.map(p => p.id === updatedPattern.id ? updatedPattern : p)
     );
-  };  const handleBackToProjects = () => {
+  };
+
+  const handleBackToProjects = () => {
     setSelectedProject(null);
     setCurrentPage('projects');
+  };
+
+  const handleAuthSuccess = (token: string, userData: { id: string; username: string; email: string }) => {
+    setAuthToken(token);
+    setUser(userData);
+    setShowAuthModal(false);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('crooked-finger-token');
+    localStorage.removeItem('crooked-finger-user');
+    setAuthToken(null);
+    setUser(null);
+    setCurrentPage('home');
   };
 
   const renderCurrentPage = () => {
@@ -484,12 +540,28 @@ Make 2.`,
         );
       case 'chat':
         return (
-          <ChatInterface
-            chatHistory={activeConversation?.messages || []}
-            onSendMessage={handleSendMessage}
-            loading={chatLoading}
-            onNewChat={handleCreateNewChat}
-          />
+          <div className="flex h-full">
+            <ConversationList
+              conversations={conversations}
+              activeConversationId={activeConversationId}
+              onConversationSelect={handleOpenConversation}
+              onNewConversation={handleCreateNewChat}
+              onDeleteConversation={(id) => {
+                setConversations(prev => prev.filter(c => c.id !== id));
+                if (activeConversationId === id) {
+                  setActiveConversationId(conversations[0]?.id || null);
+                }
+              }}
+            />
+            <div className="flex-1">
+              <ChatInterface
+                chatHistory={activeConversation?.messages || []}
+                onSendMessage={handleSendMessage}
+                loading={chatLoading}
+                onNewChat={handleCreateNewChat}
+              />
+            </div>
+          </div>
         );
       case 'projects':
         return (
@@ -532,10 +604,13 @@ Make 2.`,
         );
       case 'settings':
         return (
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <h2 className="text-xl font-medium mb-2">Settings</h2>
-              <p className="text-muted-foreground">Settings panel coming soon!</p>
+          <div className="h-full overflow-auto p-6">
+            <div className="max-w-3xl mx-auto space-y-6">
+              <div>
+                <h1 className="text-3xl font-bold mb-2">Settings</h1>
+                <p className="text-muted-foreground">Customize your Crooked Finger experience</p>
+              </div>
+              <AIModelSelector />
             </div>
           </div>
         );
@@ -555,10 +630,22 @@ Make 2.`,
 
   return (
     <div className="h-screen bg-gradient-to-br from-background via-background to-card flex">
-      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+      <Navigation
+        currentPage={currentPage}
+        onPageChange={setCurrentPage}
+        user={user}
+        onLoginClick={() => setShowAuthModal(true)}
+        onLogoutClick={handleLogout}
+      />
       <main className="flex-1 overflow-hidden">
         {renderCurrentPage()}
       </main>
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onAuthSuccess={handleAuthSuccess}
+        />
+      )}
     </div>
   );
 }

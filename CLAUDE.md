@@ -390,38 +390,47 @@ crooked-finger-ios/
 ### ✅ Implemented on Both Platforms
 - Pattern Library (view, create, delete)
 - Project Management (view, create, delete)
-- AI Chat interface with multi-model Gemini
+- AI Chat interface with multi-model Gemini + OpenRouter
 - Conversation management with backend sync
+- Conversation list sidebar with delete functionality
 - GraphQL backend integration
 - User authentication (login/register/logout)
+- **Multimodal AI image support** (paste/upload images in chat)
+- **AI model selection UI** (choose models, configure fallback order, smart routing)
+- System color scheme support (light/dark mode)
 - Error handling
 - Empty states
 
 ### 🌐 Web-Only Features (TODO for iOS)
-- YouTube transcript extraction
+- YouTube transcript extraction UI (backend exists, iOS UI pending)
 - Pattern diagram generation (matplotlib charts)
 - Professional image viewer with zoom/pan
-- AI usage dashboard
+- AI usage dashboard with real-time tracking
 - Pattern sharing
 
 ### 📱 iOS-Only Features (TODO for Web)
 - Native pull-to-refresh gestures
-- System color scheme support (light/dark mode)
+- Camera integration for photos
 - Native navigation patterns (SwiftUI)
+- Biometric authentication (Face ID/Touch ID)
+- Offline-first architecture with SwiftData
 
 ## 🚧 Remaining Tasks
 1. ✅ ~~**Fix Backend Authentication**~~: Resolved with Argon2 migration (Oct 4, 2025)
 2. ✅ ~~**Re-enable iOS Authentication**~~: Complete with login/register/logout flow
 3. ✅ ~~**AI Chat on iOS**~~: Complete with ChatViewModel and full backend integration
 4. ✅ ~~**Backend Conversation Sync**~~: Complete with conversation management (Oct 5, 2025)
-5. **Implement Web Authentication**: Add login/register to web app (currently iOS-only)
-6. **Web Conversation UI**: Add conversation list and management to web app
-7. **YouTube Integration on iOS**: Add video transcript extraction UI
-8. **Image Upload on iOS**: Camera integration and base64 upload
-9. **Image Viewer on iOS**: Professional zoom/pan like web
-10. **AI Usage Dashboard on iOS**: Port token usage tracking from web
-11. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
-12. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
+5. ✅ ~~**Implement Web Authentication**~~: Complete with login/register modal (Oct 13, 2025)
+6. ✅ ~~**Web Conversation UI**~~: Complete with conversation list sidebar (Oct 13, 2025)
+7. ✅ ~~**Multimodal AI on Web**~~: Complete with image paste/upload support (Oct 13, 2025)
+8. ✅ ~~**AI Model Selection Web**~~: Complete with smart routing and fallback config (Oct 13, 2025)
+9. **YouTube Integration on iOS**: Add video transcript extraction UI
+10. **Image Upload on iOS**: Camera integration and base64 upload (✅ Done in iOS)
+11. **Image Viewer on iOS**: Professional zoom/pan like web
+12. **AI Usage Dashboard on iOS**: Port token usage tracking from web
+13. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
+14. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
+15. **Pull-to-Refresh on Web**: Add native-feeling refresh gestures
 
 ## 🔄 Development Workflow
 1. **Make changes** locally in `frontend/` or `backend/` directories
@@ -498,5 +507,123 @@ Both projects share the same nginx server with different paths:
 - Cross-platform chat history sync between web and iOS
 - Added conversation management mutations (create, update, delete)
 
+### October 13, 2025 - Web App Feature Parity with iOS
+**Major Update: Web app now has feature parity with iOS for core functionality**
+
+1. **Web Authentication System** (`AuthModal.tsx`)
+   - Login/Register modal with form validation
+   - JWT token storage in localStorage
+   - Authorization headers automatically added to GraphQL requests
+   - User display in Navigation sidebar with logout functionality
+   - Password visibility toggle, error handling
+
+2. **Multimodal AI Image Support** (`ChatInterface.tsx`, `page.tsx`)
+   - Image paste/upload in chat interface (existing UI now wired to backend)
+   - Images sent to `chatWithAssistantEnhanced` with `imageData` parameter
+   - Base64 encoding/decoding for GraphQL transport
+   - Multiple image support (same as iOS)
+   - Authorization token passed with AI requests when logged in
+
+3. **AI Model Selection UI** (`AIModelSelector.tsx`)
+   - Smart routing toggle (auto-select best model based on complexity)
+   - OpenRouter default toggle (free & unlimited)
+   - Primary model selector with visual badges (Free/Quota)
+   - Fallback order display with numbered priority
+   - Configuration persistence in localStorage
+   - Matches iOS model selection functionality
+   - Located in Settings page
+
+4. **Conversation List Sidebar** (`ConversationList.tsx`)
+   - Side-by-side conversation list + chat interface
+   - New conversation button
+   - Conversation selection and switching
+   - Delete conversation with confirmation
+   - Message count and timestamp display
+   - Active conversation highlighting
+   - Empty state with call-to-action
+   - Matches iOS conversation management
+
+5. **Navigation Enhancements** (`Navigation.tsx`)
+   - User profile section showing username/email
+   - Sign In/Sign Out buttons
+   - Conditional rendering based on auth state
+   - Enhanced bottom section layout
+
+**Technical Implementation:**
+- All features use existing UI component library (shadcn/ui)
+- localStorage for client-side persistence (matching iOS UserDefaults pattern)
+- GraphQL mutations properly formatted with authorization headers
+- Type-safe TypeScript interfaces throughout
+- Responsive design with Tailwind CSS
+
+**What's New on Web (Previously iOS-only):**
+- ✅ User authentication with modal UI
+- ✅ Conversation list management
+- ✅ Multimodal AI (images in chat)
+- ✅ AI model selection and configuration
+- ✅ Authorization headers in GraphQL requests
+
+**Remaining Web Gaps:**
+- Pull-to-refresh gestures (iOS native feature)
+- Camera integration (web has file upload instead)
+- Biometric authentication (iOS Face ID/Touch ID)
+
+### October 13, 2025 (Later) - AI Model Configuration Backend Sync
+**Major Update: AI model selection now syncs with backend for proper model routing**
+
+1. **Backend Sync for AI Model Configuration**
+   - AIModelSelector now calls `setAiModel` GraphQL mutation on every config change
+   - Configuration syncs on component mount (from localStorage)
+   - Frontend model IDs automatically mapped to backend model names:
+     - `'openrouter-qwen'` → `'qwen/qwen3-30b-a3b:free'`
+     - `'openrouter-deepseek'` → `'deepseek/deepseek-chat-v3.1:free'`
+     - `'gemini-pro'` → `'gemini-2.5-pro'`
+     - `'gemini-flash-preview'` → `'gemini-2.5-flash-preview-09-2025'`
+     - `'gemini-flash'` → `'gemini-2.5-flash'`
+     - `'gemini-flash-lite'` → `'gemini-2.5-flash-lite'`
+
+2. **Fallback Order Reordering** (`AIModelSelector.tsx`)
+   - Added up/down arrow buttons for each model in fallback order
+   - Drag-free reordering with visual feedback
+   - Disabled buttons at list boundaries (first/last items)
+   - Auto-syncs new order with backend via GraphQL mutation
+   - Visual hint: "Click arrows to reorder"
+
+3. **Smart Primary Model Management**
+   - When primary model changes, automatically moves to top of fallback order
+   - Ensures primary model is always first in fallback chain
+   - All 6 models included in fallback order (previously missing qwen)
+
+4. **Image Data Format Fix** (`page.tsx`)
+   - Fixed multimodal image support to match iOS implementation
+   - Images sent as JSON string (not GraphQL array)
+   - Base64 data extracted from data URLs before sending
+   - Compatible with both web and iOS clients
+
+5. **Apollo Client Direct Calls** (`AIModelSelector.tsx`)
+   - Replaced `useMutation` hook with direct `apolloClient.mutate()` calls
+   - Fixes Next.js Turbopack module resolution issues
+   - Compatible with client component architecture
+
+**Technical Details:**
+- Location: `frontend/src/components/AIModelSelector.tsx` (lines 96-140)
+- GraphQL Mutation: `SET_AI_MODEL` added to `frontend/src/lib/graphql/mutations.ts`
+- Smart Routing: Passes `modelName: null` when enabled for complexity-based routing
+- Single Model Mode: Passes selected model name with full fallback order
+- Backend changes: None (removed unused `import json` from mutations.py)
+
+**What This Fixes:**
+- ✅ Selected model (Gemini Pro/Qwen/etc.) now properly respected by backend
+- ✅ Smart routing toggle works correctly
+- ✅ No more duplicate model prefixes in responses (e.g., `[flash-preview] [flash]`)
+- ✅ Fallback order customizable and syncs with backend
+- ✅ Configuration persists across page reloads and sessions
+
+**Files Modified:**
+- `frontend/src/components/AIModelSelector.tsx` - Backend sync + reordering UI
+- `frontend/src/lib/graphql/mutations.ts` - Added SET_AI_MODEL mutation
+- `frontend/src/app/page.tsx` - Fixed image data format for multimodal AI
+- `backend/app/schemas/mutations.py` - Removed unused import (cleanup only)
+
 ---
-*Last Updated: October 7, 2025*
+*Last Updated: October 13, 2025*

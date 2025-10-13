@@ -51,3 +51,15 @@ export const DELETE_PROJECT = gql`
     deleteProject(projectId: $projectId)
   }
 `;
+
+export const SET_AI_MODEL = gql`
+  mutation SetAiModel($modelName: String, $priorityOrder: [String!]) {
+    setAiModel(modelName: $modelName, priorityOrder: $priorityOrder) {
+      useOpenrouter
+      currentProvider
+      selectedModel
+      availableModels
+      modelPriorityOrder
+    }
+  }
+`;

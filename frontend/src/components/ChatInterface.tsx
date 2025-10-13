@@ -21,7 +21,7 @@ interface ChatMessage {
 
 interface ChatInterfaceProps {
   chatHistory: ChatMessage[];
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, images?: string[]) => void;
   loading?: boolean;
   hideHeader?: boolean;
   onNewChat?: () => void;
@@ -95,13 +95,8 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, hid
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (message.trim() || pastedImages.length > 0) {
-      // For now, just send the text message
-      // TODO: Backend integration for image support
-      let fullMessage = message;
-      if (pastedImages.length > 0) {
-        fullMessage += `\n\n[${pastedImages.length} image(s) attached - Image support coming soon!]`;
-      }
-      onSendMessage(fullMessage);
+      // Send message with images to backend
+      onSendMessage(message, pastedImages.length > 0 ? pastedImages : undefined);
       setMessage('');
       setPastedImages([]);
     }
