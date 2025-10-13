@@ -5,8 +5,8 @@
       "path": "."
     },
     {
-      "name": "Crooked Finger iOS",
-      "path": "../Crooked Finger iOS"
+      "name": "crooked-finger-ios",
+      "path": "../crooked-finger-ios"
     }
   ],
   "settings": {
