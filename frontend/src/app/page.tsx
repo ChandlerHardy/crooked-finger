@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// import { useMutation } from '@apollo/client/react/index.js';
+import { fetchWithAuth } from '../lib/apollo-client';
 import { Navigation } from '../components/Navigation';
 import { HomePage } from '../components/HomePage';
 import { ChatInterface } from '../components/ChatInterface';
@@ -13,6 +13,8 @@ import { YouTubeTest } from '../components/YouTubeTest';
 import { AuthModal } from '../components/AuthModal';
 import { AIModelSelector } from '../components/AIModelSelector';
 import { ConversationList } from '../components/ConversationList';
+import { GET_PROJECTS, GET_CHAT_MESSAGES } from '../lib/graphql/queries';
+import { CREATE_PROJECT, UPDATE_PROJECT, DELETE_PROJECT } from '../lib/graphql/mutations';
 
 interface Project {
   id: string;
@@ -86,6 +88,7 @@ export default function Home() {
         if (storedToken && storedUser) {
           setAuthToken(storedToken);
           setUser(JSON.parse(storedUser));
+          
         }
       } catch (error) {
         console.error('Error loading auth state:', error);
@@ -94,178 +97,147 @@ export default function Home() {
     loadAuthState();
   }, []);
 
-  // Load saved patterns from localStorage on mount
+  // Fetch patterns/projects from backend
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [projectsData, setProjectsData] = useState<any>(null);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  
+  const fetchProjects = async () => {
+    setProjectsLoading(true);
+    try {
+      console.log('🔄 Fetching projects from backend...');
+      const response = await fetchWithAuth(GET_PROJECTS);
+      console.log('📋 Backend response:', response);
+      setProjectsData(response.data);
+      console.log('📊 Projects data set:', response.data);
+    } catch (error) {
+      console.error('❌ Error fetching projects:', error);
+    } finally {
+      setProjectsLoading(false);
+    }
+  };
+  
+  // Load projects on mount
   useEffect(() => {
-    const loadSavedPatterns = () => {
-      try {
-        const stored = localStorage.getItem('crooked-finger-patterns');
-        if (stored) {
-          const parsed = JSON.parse(stored) as SavedPattern[];
-          // Convert date strings back to Date objects
-          const patternsWithDates = parsed.map((p) => ({
-            ...p,
-            createdAt: p.createdAt ? new Date(p.createdAt) : new Date(),
-          }));
-          setSavedPatterns(patternsWithDates);
-        }
-      } catch (error) {
-        console.error('Error loading saved patterns:', error);
-      }
-    };
-    loadSavedPatterns();
+    fetchProjects();
   }, []);
 
-  // Save patterns to localStorage whenever they change
+  
+  // Convert backend projects to SavedPattern format
   useEffect(() => {
-    if (savedPatterns.length > 0) {
-      try {
-        localStorage.setItem('crooked-finger-patterns', JSON.stringify(savedPatterns));
-      } catch (error) {
-        console.error('Error saving patterns:', error);
-      }
+    if (projectsData?.projects) {
+      // Filter for patterns (projects without notes)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const patterns = projectsData.projects
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((project: any) => !project.notes || project.notes.trim() === '')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((project: any) => ({
+          id: project.id.toString(),
+          name: project.name,
+          description: project.translatedText || '',
+          difficulty: project.difficultyLevel as 'beginner' | 'intermediate' | 'advanced',
+          category: 'imported',
+          tags: [],
+          notation: project.patternText || '',
+          instructions: project.translatedText || '',
+          materials: project.yarnWeight || '',
+          estimatedTime: project.estimatedTime || '',
+          images: project.imageData ? JSON.parse(project.imageData) : [],
+          isFavorite: false,
+          views: 0,
+          downloads: 0,
+          createdAt: new Date(project.createdAt),
+        }));
+      setSavedPatterns(patterns);
     }
-  }, [savedPatterns]);
+  }, [projectsData]);
+  
+  // For projects (with notes)
+  useEffect(() => {
+    if (projectsData?.projects) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const userProjects = projectsData.projects
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .filter((project: any) => project.notes && project.notes.trim() !== '')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((project: any) => ({
+          id: project.id.toString(),
+          name: project.name,
+          description: project.notes || '',
+          pattern: project.patternText || '',
+          status: project.isCompleted ? 'completed' as const : 'in-progress' as const,
+          difficulty: project.difficultyLevel as 'beginner' | 'intermediate' | 'advanced',
+          tags: [],
+          createdAt: new Date(project.createdAt),
+          updatedAt: new Date(project.updatedAt),
+          isFavorite: false,
+        }));
+      setProjects(userProjects);
+    }
+  }, [projectsData]);
   // const [chatWithAssistant, { loading: chatLoading }] = useMutation<
   //   ChatWithAssistantResponse,
   //   ChatWithAssistantVariables
   // >(CHAT_WITH_ASSISTANT);
 
-  // Mock data for demonstration
-  // Load conversations from localStorage on mount
-  useEffect(() => {
-    const loadConversations = () => {
-      try {
-        const stored = localStorage.getItem('crooked-finger-conversations');
-        if (stored) {
-          const parsed = JSON.parse(stored) as ChatConversation[];
-          const conversationsWithDates = parsed.map((conv) => ({
-            ...conv,
-            createdAt: conv.createdAt ? new Date(conv.createdAt) : new Date(),
-            updatedAt: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
-            messages: conv.messages.map((msg) => ({
-              ...msg,
-              timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
-            })),
-          }));
-          setConversations(conversationsWithDates);
+  // GraphQL mutations
+  // GraphQL mutations using fetch
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createProjectMutation = async (variables: any) => {
+    const response = await fetchWithAuth(CREATE_PROJECT, variables);
+    return response.data;
+  };
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateProjectMutation = async (variables: any) => {
+    const response = await fetchWithAuth(UPDATE_PROJECT, variables);
+    return response.data;
+  };
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const deleteProjectMutation = async (variables: any) => {
+    const response = await fetchWithAuth(DELETE_PROJECT, variables);
+    return response.data;
+  };
+  
+  // Note: Conversations will be implemented with proper backend integration
+  // For now, keeping this as-is until we add conversation queries
+  const loadConversations = () => {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const stored = localStorage.getItem('crooked-finger-conversations');
+      if (stored) {
+        const parsed = JSON.parse(stored) as ChatConversation[];
+        const conversationsWithDates = parsed.map((conv) => ({
+          ...conv,
+          createdAt: conv.createdAt ? new Date(conv.createdAt) : new Date(),
+          updatedAt: conv.updatedAt ? new Date(conv.updatedAt) : new Date(),
+          messages: conv.messages.map((msg) => ({
+            ...msg,
+            timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date(),
+          })),
+        }));
+        setConversations(conversationsWithDates);
 
-          // Set most recent conversation as active
-          if (conversationsWithDates.length > 0) {
-            setActiveConversationId(conversationsWithDates[0].id);
-          }
+        // Set most recent conversation as active
+        if (conversationsWithDates.length > 0) {
+          setActiveConversationId(conversationsWithDates[0].id);
         }
-      } catch (error) {
-        console.error('Error loading conversations:', error);
       }
-    };
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
+  
+  // Load conversations only on client side
+  useEffect(() => {
     loadConversations();
   }, []);
 
-  // Save conversations to localStorage whenever they change
-  useEffect(() => {
-    if (conversations.length > 0) {
-      try {
-        localStorage.setItem('crooked-finger-conversations', JSON.stringify(conversations));
-      } catch (error) {
-        console.error('Error saving conversations:', error);
-      }
-    }
-  }, [conversations]);
-
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: '1',
-      name: 'Cozy Blanket',
-      description: 'A warm granny square blanket for winter evenings',
-      pattern: `CLASSIC GRANNY SQUARE BLANKET
-
-Materials:
-- Medium weight yarn (4) in 4 colors
-- Size H/8 (5.0mm) crochet hook
-- Tapestry needle for joining
-
-GRANNY SQUARE (Make 48):
-
-Round 1: Ch 4, join with sl st to form ring.
-Ch 3 (counts as 1st dc), 2 dc in ring, ch 2, *3 dc in ring, ch 2*, repeat from * 2 more times. Join with sl st to top of ch-3. (12 dc, 4 ch-2 spaces)
-
-Round 2: Sl st to first ch-2 space, ch 3, (2 dc, ch 2, 3 dc) in same space (corner made), ch 1, *(3 dc, ch 2, 3 dc) in next ch-2 space, ch 1*, repeat from * 2 more times. Join with sl st to top of ch-3.
-
-Round 3: Sl st to first ch-2 space, ch 3, (2 dc, ch 2, 3 dc) in same space, ch 1, 3 dc in next ch-1 space, ch 1, *(3 dc, ch 2, 3 dc) in next ch-2 space, ch 1, 3 dc in next ch-1 space, ch 1*, repeat from * 2 more times. Join with sl st to top of ch-3.
-
-Continue in this manner until square measures 4 inches.
-
-ASSEMBLY:
-Arrange squares in an 8x6 grid.
-Join squares using single crochet seams.
-
-BORDER:
-Round 1: Work sc around entire blanket edge.
-Round 2: Ch 1, sc in each sc around.
-Round 3: Repeat Round 2.
-
-Fasten off and weave in ends.`,
-      status: 'in-progress',
-      difficulty: 'beginner',
-      tags: ['blanket', 'granny-square', 'winter'],
-      createdAt: new Date('2024-01-15'),
-      updatedAt: new Date('2024-01-20'),
-      isFavorite: true,
-    },
-    {
-      id: '2',
-      name: 'Baby Booties',
-      description: 'Adorable booties for newborns',
-      pattern: `BABY BOOTIES PATTERN
-
-Size: 0-3 months
-
-Materials:
-- Light weight yarn (3) in baby colors
-- Size F/5 (3.75mm) crochet hook
-- Tapestry needle
-- Small buttons (optional)
-
-SOLE:
-Ch 15.
-Row 1: Sc in 2nd ch from hook, sc in next 12 ch, 3 sc in last ch. Working on opposite side of foundation ch, sc in next 12 ch, 2 sc in last ch. (30 sc)
-Row 2: Ch 1, turn. 2 sc in first sc, sc in next 12 sc, 2 sc in next 3 sc, sc in next 12 sc, 2 sc in last 2 sc. (36 sc)
-
-SIDES:
-Row 3: Ch 1, turn. Sc in each sc around. (36 sc)
-Rows 4-8: Repeat Row 3.
-
-TOE SHAPING:
-Row 9: Ch 1, turn. Sc in first 11 sc, [sc2tog] 7 times, sc in last 11 sc. (29 sc)
-Row 10: Ch 1, turn. Sc in first 11 sc, [sc2tog] 3 times, sc in last 12 sc. (26 sc)
-
-ANKLE:
-Rows 11-14: Ch 1, turn. Sc in each sc around.
-
-STRAP (optional):
-Ch 20, sl st to opposite side of bootie.
-
-Make 2.`,
-      status: 'completed',
-      difficulty: 'intermediate',
-      tags: ['baby', 'booties', 'gift'],
-      createdAt: new Date('2024-01-10'),
-      updatedAt: new Date('2024-01-18'),
-      isFavorite: false,
-    },
-    {
-      id: '3',
-      name: 'Cable Scarf',
-      description: 'Elegant cable pattern scarf',
-      pattern: 'FPtr around next 2 sts...',
-      status: 'planning',
-      difficulty: 'advanced',
-      tags: ['scarf', 'cable', 'texture'],
-      createdAt: new Date('2024-01-22'),
-      updatedAt: new Date('2024-01-22'),
-      isFavorite: true,
-    },
-  ]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const handleCreateNewChat = () => {
     const newConversation: ChatConversation = {
@@ -438,7 +410,8 @@ Make 2.`,
     return "I'm here to help with your crochet questions! Feel free to paste any pattern notation, and I'll translate it into easy-to-follow instructions.";
   };
 
-  const handleCreateProject = () => {
+  const handleCreateProject = async () => {
+    // For now, just log that create was clicked
     // In a real app, this would open a create project modal/form
     console.log('Create new project');
   };
@@ -448,60 +421,114 @@ Make 2.`,
     setCurrentPage('project-detail');
   };
 
-  const handleUpdateProject = (updatedProject: Project) => {
-    setProjects(prevProjects =>
-      prevProjects.map(p => p.id === updatedProject.id ? updatedProject : p)
-    );
-    setSelectedProject(updatedProject);
+  const handleUpdateProject = async (updatedProject: Project) => {
+    try {
+      await updateProjectMutation({
+        variables: {
+          projectId: parseInt(updatedProject.id),
+          input: {
+            name: updatedProject.name,
+            patternText: updatedProject.pattern,
+            difficultyLevel: updatedProject.difficulty,
+            notes: updatedProject.description,
+            isCompleted: updatedProject.status === 'completed',
+          }
+        }
+      });
+      await fetchProjects();
+      setSelectedProject(updatedProject);
+    } catch (error) {
+      console.error('Error updating project:', error);
+      alert('Failed to update project. Please try again.');
+    }
   };
 
-  const handleSavePattern = (patternData: Partial<SavedPattern> & { patternName?: string; patternNotation?: string; patternInstructions?: string; difficultyLevel?: string }) => {
-    // Check if it's a Pattern object (from manual creation) or pattern data (from YouTube)
-    if (patternData.id && patternData.notation) {
-      // Already a Pattern object from manual creation - cast it properly
-      const fullPattern = patternData as SavedPattern;
-      setSavedPatterns(prev => [fullPattern, ...prev]);
-      return;
-    }
+  const handleSavePattern = async (patternData: Partial<SavedPattern> & { patternName?: string; patternNotation?: string; patternInstructions?: string; difficultyLevel?: string }) => {
+    try {
+      // Check if it's a Pattern object (from manual creation) or pattern data (from YouTube)
+      if (patternData.id && patternData.notation) {
+        // Already a Pattern object from manual creation - create it in backend
+        const fullPattern = patternData as SavedPattern;
+        await createProjectMutation({
+          variables: {
+            input: {
+              name: fullPattern.name,
+              patternText: fullPattern.notation,
+              translatedText: fullPattern.instructions,
+              difficultyLevel: fullPattern.difficulty,
+              estimatedTime: fullPattern.estimatedTime,
+              yarnWeight: fullPattern.materials,
+              imageData: fullPattern.images && fullPattern.images.length > 0 ? JSON.stringify(fullPattern.images) : null,
+              notes: null, // Patterns have no notes
+            }
+          }
+        });
+        await fetchProjects();
+        return;
+      }
 
-    // YouTube pattern data - transform it
-    const difficultyValue = patternData.difficultyLevel;
-    const validDifficulty: 'beginner' | 'intermediate' | 'advanced' = 
-      (difficultyValue === 'beginner' || difficultyValue === 'intermediate' || difficultyValue === 'advanced') 
+      // YouTube pattern data - transform and save to backend
+      const difficultyValue = patternData.difficultyLevel;
+      const validDifficulty = difficultyValue === 'beginner' || difficultyValue === 'intermediate' || difficultyValue === 'advanced' 
         ? difficultyValue 
         : 'beginner';
 
-    const newPattern: SavedPattern = {
-      id: Date.now().toString(),
-      name: patternData.patternName || 'Untitled Pattern',
-      description: patternData.description || '',
-      difficulty: validDifficulty,
-      category: 'youtube-import',
-      tags: patternData.videoId ? ['youtube', 'imported'] : ['imported'],
-      notation: patternData.patternNotation || '',
-      instructions: patternData.patternInstructions || '',
-      materials: patternData.materials || '',
-      estimatedTime: patternData.estimatedTime || '',
-      videoId: patternData.videoId,
-      thumbnailUrl: patternData.thumbnailUrl, // YouTube thumbnail will be used as pattern thumbnail
-      images: patternData.thumbnailUrl ? [patternData.thumbnailUrl] : [], // Also add to gallery
-      isFavorite: false,
-      views: 0,
-      downloads: 0,
-      createdAt: new Date(),
-    };
-    setSavedPatterns(prev => [newPattern, ...prev]);
-    setCurrentPage('patterns');
+      await createProjectMutation({
+        variables: {
+          input: {
+            name: patternData.patternName || 'Untitled Pattern',
+            patternText: patternData.patternNotation || '',
+            translatedText: patternData.patternInstructions || '',
+            difficultyLevel: validDifficulty,
+            estimatedTime: patternData.estimatedTime || '',
+            yarnWeight: patternData.materials || '',
+            imageData: patternData.thumbnailUrl ? JSON.stringify([patternData.thumbnailUrl]) : null,
+            notes: null, // Patterns have no notes
+          }
+        }
+      });
+      
+      await fetchProjects();
+      setCurrentPage('patterns');
+    } catch (error) {
+      console.error('Error saving pattern:', error);
+      alert('Failed to save pattern. Please try again.');
+    }
   };
 
-  const handleDeletePattern = (patternId: string) => {
-    setSavedPatterns(prev => prev.filter(p => p.id !== patternId));
+  const handleDeletePattern = async (patternId: string) => {
+    try {
+      await deleteProjectMutation({
+        variables: { projectId: parseInt(patternId) }
+      });
+      await fetchProjects();
+    } catch (error) {
+      console.error('Error deleting pattern:', error);
+      alert('Failed to delete pattern. Please try again.');
+    }
   };
 
-  const handleUpdatePattern = (updatedPattern: SavedPattern) => {
-    setSavedPatterns(prev =>
-      prev.map(p => p.id === updatedPattern.id ? updatedPattern : p)
-    );
+  const handleUpdatePattern = async (updatedPattern: SavedPattern) => {
+    try {
+      await updateProjectMutation({
+        variables: {
+          projectId: parseInt(updatedPattern.id),
+          input: {
+            name: updatedPattern.name,
+            patternText: updatedPattern.notation,
+            translatedText: updatedPattern.instructions,
+            difficultyLevel: updatedPattern.difficulty,
+            estimatedTime: updatedPattern.estimatedTime,
+            yarnWeight: updatedPattern.materials,
+            imageData: updatedPattern.images && updatedPattern.images.length > 0 ? JSON.stringify(updatedPattern.images) : null,
+          }
+        }
+      });
+      await fetchProjects();
+    } catch (error) {
+      console.error('Error updating pattern:', error);
+      alert('Failed to update pattern. Please try again.');
+    }
   };
 
   const handleBackToProjects = () => {
@@ -513,6 +540,8 @@ Make 2.`,
     setAuthToken(token);
     setUser(userData);
     setShowAuthModal(false);
+    // Refresh data after authentication
+    fetchProjects();
   };
 
   const handleLogout = () => {
@@ -520,6 +549,7 @@ Make 2.`,
     localStorage.removeItem('crooked-finger-user');
     setAuthToken(null);
     setUser(null);
+    
     setCurrentPage('home');
   };
 

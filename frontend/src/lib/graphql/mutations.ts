@@ -52,6 +52,59 @@ export const DELETE_PROJECT = gql`
   }
 `;
 
+export const REGISTER = gql`
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      user {
+        id
+        email
+      }
+      accessToken
+      tokenType
+    }
+  }
+`;
+
+export const LOGIN = gql`
+  mutation Login($input: LoginInput!) {
+    login(input: $input) {
+      user {
+        id
+        email
+      }
+      accessToken
+      tokenType
+    }
+  }
+`;
+
+// Raw string versions for fetch usage (AuthModal)
+export const REGISTER_RAW = `
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      user {
+        id
+        email
+      }
+      accessToken
+      tokenType
+    }
+  }
+`;
+
+export const LOGIN_RAW = `
+  mutation Login($input: LoginInput!) {
+    login(input: $input) {
+      user {
+        id
+        email
+      }
+      accessToken
+      tokenType
+    }
+  }
+`;
+
 export const SET_AI_MODEL = gql`
   mutation SetAiModel($modelName: String, $priorityOrder: [String!]) {
     setAiModel(modelName: $modelName, priorityOrder: $priorityOrder) {

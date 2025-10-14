@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card } from './ui/card';
 import { AlertCircle, Loader2, Eye, EyeOff } from 'lucide-react';
+import { LOGIN_RAW, REGISTER_RAW } from '../lib/graphql/mutations';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -14,7 +15,6 @@ interface AuthModalProps {
 
 export function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -27,16 +27,12 @@ export function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     setError('');
 
     // Validation
-    if (!username || !password) {
-      setError('Username and password are required');
+    if (!email || !password) {
+      setError('Email and password are required');
       return;
     }
 
     if (mode === 'register') {
-      if (!email) {
-        setError('Email is required');
-        return;
-      }
       if (password !== confirmPassword) {
         setError('Passwords do not match');
         return;
@@ -52,35 +48,11 @@ export function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
     try {
       const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
 
-      const mutation = mode === 'login'
-        ? `
-          mutation Login($username: String!, $password: String!) {
-            login(username: $username, password: $password) {
-              token
-              user {
-                id
-                username
-                email
-              }
-            }
-          }
-        `
-        : `
-          mutation Register($username: String!, $email: String!, $password: String!) {
-            register(username: $username, email: $email, password: $password) {
-              token
-              user {
-                id
-                username
-                email
-              }
-            }
-          }
-        `;
+      const mutation = mode === 'login' ? LOGIN_RAW : REGISTER_RAW;
 
       const variables = mode === 'login'
-        ? { username, password }
-        : { username, email, password };
+        ? { input: { email, password } }
+        : { input: { email, password } };
 
       const response = await fetch(graphqlUrl, {
         method: 'POST',
@@ -94,20 +66,22 @@ export function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
       });
 
       const result = await response.json();
+      console.log('🔍 Full response from server:', result);
 
       if (result.errors) {
+        console.error('❌ GraphQL errors:', result.errors);
         setError(result.errors[0].message || 'Authentication failed');
         return;
       }
 
       const data = mode === 'login' ? result.data.login : result.data.register;
 
-      if (data.token) {
+      if (data.accessToken) {
         // Store token in localStorage
-        localStorage.setItem('crooked-finger-token', data.token);
+        localStorage.setItem('crooked-finger-token', data.accessToken);
         localStorage.setItem('crooked-finger-user', JSON.stringify(data.user));
 
-        onAuthSuccess(data.token, data.user);
+        onAuthSuccess(data.accessToken, data.user);
       } else {
         setError('Authentication failed');
       }
@@ -142,32 +116,17 @@ export function AuthModal({ onClose, onAuthSuccess }: AuthModalProps) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
               disabled={loading}
-              autoComplete="username"
+              autoComplete="email"
             />
           </div>
-
-          {mode === 'register' && (
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                disabled={loading}
-                autoComplete="email"
-              />
-            </div>
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>

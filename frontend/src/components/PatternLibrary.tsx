@@ -225,47 +225,7 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
   );
 }
 
-const mockPatterns: Pattern[] = [
-  {
-    id: '1',
-    name: 'Granny Square',
-    description: 'Classic granny square pattern perfect for beginners',
-    difficulty: 'beginner',
-    category: 'motifs',
-    tags: ['square', 'classic', 'afghan'],
-    notation: 'Ch 4, join with sl st to form ring. R1: Ch 3, 2 dc in ring, ch 2, *3 dc in ring, ch 2* 3 times, join.',
-    instructions: 'Chain 4 and join with slip stitch to form a ring. Round 1: Chain 3 (counts as first double crochet), work 2 double crochets in ring, chain 2, repeat around...',
-    isFavorite: true,
-    views: 1250,
-    downloads: 340
-  },
-  {
-    id: '2',
-    name: 'Shell Stitch Border',
-    description: 'Elegant shell border for blankets and scarves',
-    difficulty: 'intermediate',
-    category: 'borders',
-    tags: ['shell', 'border', 'decorative'],
-    notation: '*Skip 2 sts, 5 dc in next st, skip 2 sts, sc in next st* repeat across',
-    instructions: 'Skip 2 stitches, work 5 double crochets in the next stitch to create a shell, skip 2 stitches, single crochet in next stitch...',
-    isFavorite: false,
-    views: 890,
-    downloads: 120
-  },
-  {
-    id: '3',
-    name: 'Cable Stitch Panel',
-    description: 'Advanced cable technique for textured projects',
-    difficulty: 'advanced',
-    category: 'stitches',
-    tags: ['cable', 'texture', 'advanced'],
-    notation: 'FPtr around next 2 sts, skip next 2 sts behind FPtr, FPtr around skipped sts',
-    instructions: 'Front post treble crochet around the next 2 stitches, skip the next 2 stitches behind the front post trebles, then work front post trebles around the skipped stitches to create the cable cross...',
-    isFavorite: true,
-    views: 650,
-    downloads: 85
-  },
-];
+
 
 export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePattern, onUpdatePattern }: PatternLibraryProps) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -294,8 +254,8 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
   const categories = ['all', 'motifs', 'borders', 'stitches', 'edgings', 'flowers', 'youtube-import'];
   const difficulties = ['all', 'beginner', 'intermediate', 'advanced'];
 
-  // Combine saved patterns with mock patterns
-  const allPatterns = [...savedPatterns, ...mockPatterns];
+  // Use only saved patterns from backend (no mock data)
+  const allPatterns = savedPatterns;
 
   const filteredPatterns = allPatterns.filter(pattern => {
     const matchesSearch = pattern.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
