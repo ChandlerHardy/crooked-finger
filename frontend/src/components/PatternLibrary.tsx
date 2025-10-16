@@ -8,6 +8,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from './ui/alert-dialog';
+import { PatternCreationAI } from './PatternCreationAI';
 
 interface Pattern {
   id: string;
@@ -344,6 +346,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
     estimatedTime: '',
     thumbnailUrl: '',
   });
+  const [activeTab, setActiveTab] = useState('manual'); // Track which tab is active
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -892,14 +895,20 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
 
       {/* New Pattern Dialog */}
       <Dialog open={showNewPatternDialog} onOpenChange={setShowNewPatternDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Pattern</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="manual">Manual</TabsTrigger>
+              <TabsTrigger value="ai">AI Assistant</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="manual" className="space-y-4 py-4">
             <div>
-              <Label htmlFor="name">Pattern Name *</Label>
+              <Label htmlFor="name" className="mb-2 block">Pattern Name *</Label>
               <Input
                 id="name"
                 value={newPattern.name}
@@ -909,7 +918,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
 
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="mb-2 block">Description</Label>
               <Textarea
                 id="description"
                 value={newPattern.description}
@@ -921,7 +930,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="difficulty">Difficulty</Label>
+                <Label htmlFor="difficulty" className="mb-2 block">Difficulty</Label>
                 <select
                   id="difficulty"
                   value={newPattern.difficulty}
@@ -935,7 +944,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
               </div>
 
               <div>
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category" className="mb-2 block">Category</Label>
                 <select
                   id="category"
                   value={newPattern.category}
@@ -953,7 +962,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
 
             <div>
-              <Label htmlFor="tags">Tags (comma-separated)</Label>
+              <Label htmlFor="tags" className="mb-2 block">Tags (comma-separated)</Label>
               <Input
                 id="tags"
                 value={newPattern.tags}
@@ -963,7 +972,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
 
             <div>
-              <Label htmlFor="notation">Pattern Notation *</Label>
+              <Label htmlFor="notation" className="mb-2 block">Pattern Notation *</Label>
               <Textarea
                 id="notation"
                 value={newPattern.notation}
@@ -974,7 +983,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
 
             <div>
-              <Label htmlFor="instructions">Instructions</Label>
+              <Label htmlFor="instructions" className="mb-2 block">Instructions</Label>
               <Textarea
                 id="instructions"
                 value={newPattern.instructions}
@@ -985,7 +994,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
 
             <div>
-              <Label htmlFor="materials">Materials</Label>
+              <Label htmlFor="materials" className="mb-2 block">Materials</Label>
               <Textarea
                 id="materials"
                 value={newPattern.materials}
@@ -996,7 +1005,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
 
             <div>
-              <Label htmlFor="estimatedTime">Estimated Time</Label>
+              <Label htmlFor="estimatedTime" className="mb-2 block">Estimated Time</Label>
               <Input
                 id="estimatedTime"
                 value={newPattern.estimatedTime}
@@ -1006,7 +1015,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             </div>
 
             <div>
-              <Label htmlFor="thumbnail">Thumbnail Image (Optional)</Label>
+              <Label htmlFor="thumbnail" className="mb-2 block">Thumbnail Image (Optional)</Label>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -1043,16 +1052,38 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                 )}
               </div>
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewPatternDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveNewPattern}>
-              Save Pattern
-            </Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowNewPatternDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveNewPattern}>
+                  Save Pattern
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+
+            <TabsContent value="ai" forceMount className={activeTab !== 'ai' ? 'hidden' : ''}>
+              {/* Keep AI component mounted to preserve chat history - use forceMount prop */}
+              <PatternCreationAI
+                onPatternExtracted={(data) => {
+                  console.log('🎯 Pattern data extracted from AI:', data);
+                  // Auto-populate form fields from AI extraction
+                  setNewPattern(prev => ({
+                    ...prev,
+                    // Use extracted data, but don't override if extraction returned undefined
+                    name: data.name || prev.name,
+                    notation: data.notation || prev.notation,
+                    instructions: data.instructions || prev.instructions,
+                    difficulty: (data.difficulty as 'beginner' | 'intermediate' | 'advanced') || prev.difficulty,
+                    materials: data.materials || prev.materials,
+                    estimatedTime: data.estimatedTime || prev.estimatedTime,
+                    thumbnailUrl: data.images?.[0] || prev.thumbnailUrl,
+                  }));
+                }}
+              />
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 

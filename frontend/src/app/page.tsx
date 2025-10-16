@@ -782,15 +782,13 @@ export default function Home() {
   const handleUpdateProject = async (updatedProject: Project) => {
     try {
       await updateProjectMutation({
-        variables: {
-          projectId: parseInt(updatedProject.id),
-          input: {
-            name: updatedProject.name,
-            patternText: updatedProject.pattern,
-            difficultyLevel: updatedProject.difficulty,
-            notes: updatedProject.description,
-            isCompleted: updatedProject.status === 'completed',
-          }
+        projectId: parseInt(updatedProject.id),
+        input: {
+          name: updatedProject.name,
+          patternText: updatedProject.pattern,
+          difficultyLevel: updatedProject.difficulty,
+          notes: updatedProject.description,
+          isCompleted: updatedProject.status === 'completed',
         }
       });
       await fetchProjects();
@@ -808,17 +806,15 @@ export default function Home() {
         // Already a Pattern object from manual creation - create it in backend
         const fullPattern = patternData as SavedPattern;
         await createProjectMutation({
-          variables: {
-            input: {
-              name: fullPattern.name,
-              patternText: fullPattern.notation,
-              translatedText: fullPattern.instructions,
-              difficultyLevel: fullPattern.difficulty,
-              estimatedTime: fullPattern.estimatedTime,
-              yarnWeight: fullPattern.materials,
-              imageData: fullPattern.images && fullPattern.images.length > 0 ? JSON.stringify(fullPattern.images) : null,
-              notes: null, // Patterns have no notes
-            }
+          input: {
+            name: fullPattern.name,
+            patternText: fullPattern.notation,
+            translatedText: fullPattern.instructions,
+            difficultyLevel: fullPattern.difficulty,
+            estimatedTime: fullPattern.estimatedTime,
+            yarnWeight: fullPattern.materials,
+            imageData: fullPattern.images && fullPattern.images.length > 0 ? JSON.stringify(fullPattern.images) : null,
+            notes: null, // Patterns have no notes
           }
         });
         await fetchProjects();
@@ -827,22 +823,20 @@ export default function Home() {
 
       // YouTube pattern data - transform and save to backend
       const difficultyValue = patternData.difficultyLevel;
-      const validDifficulty = difficultyValue === 'beginner' || difficultyValue === 'intermediate' || difficultyValue === 'advanced' 
-        ? difficultyValue 
+      const validDifficulty = difficultyValue === 'beginner' || difficultyValue === 'intermediate' || difficultyValue === 'advanced'
+        ? difficultyValue
         : 'beginner';
 
       await createProjectMutation({
-        variables: {
-          input: {
-            name: patternData.patternName || 'Untitled Pattern',
-            patternText: patternData.patternNotation || '',
-            translatedText: patternData.patternInstructions || '',
-            difficultyLevel: validDifficulty,
-            estimatedTime: patternData.estimatedTime || '',
-            yarnWeight: patternData.materials || '',
-            imageData: patternData.thumbnailUrl ? JSON.stringify([patternData.thumbnailUrl]) : null,
-            notes: null, // Patterns have no notes
-          }
+        input: {
+          name: patternData.patternName || 'Untitled Pattern',
+          patternText: patternData.patternNotation || '',
+          translatedText: patternData.patternInstructions || '',
+          difficultyLevel: validDifficulty,
+          estimatedTime: patternData.estimatedTime || '',
+          yarnWeight: patternData.materials || '',
+          imageData: patternData.thumbnailUrl ? JSON.stringify([patternData.thumbnailUrl]) : null,
+          notes: null, // Patterns have no notes
         }
       });
       
@@ -856,12 +850,21 @@ export default function Home() {
 
   const handleDeletePattern = async (patternId: string) => {
     try {
-      await deleteProjectMutation({
-        variables: { projectId: parseInt(patternId) }
-      });
+      console.log('🗑️ Deleting pattern with ID:', patternId);
+      const numericId = parseInt(patternId);
+      console.log('🗑️ Parsed numeric ID:', numericId);
+
+      if (isNaN(numericId)) {
+        console.error('❌ Invalid pattern ID - cannot convert to number:', patternId);
+        alert('Cannot delete this pattern. Invalid ID.');
+        return;
+      }
+
+      await deleteProjectMutation({ projectId: numericId });
+      console.log('✅ Pattern deleted successfully');
       await fetchProjects();
     } catch (error) {
-      console.error('Error deleting pattern:', error);
+      console.error('❌ Error deleting pattern:', error);
       alert('Failed to delete pattern. Please try again.');
     }
   };
@@ -869,17 +872,15 @@ export default function Home() {
   const handleUpdatePattern = async (updatedPattern: SavedPattern) => {
     try {
       await updateProjectMutation({
-        variables: {
-          projectId: parseInt(updatedPattern.id),
-          input: {
-            name: updatedPattern.name,
-            patternText: updatedPattern.notation,
-            translatedText: updatedPattern.instructions,
-            difficultyLevel: updatedPattern.difficulty,
-            estimatedTime: updatedPattern.estimatedTime,
-            yarnWeight: updatedPattern.materials,
-            imageData: updatedPattern.images && updatedPattern.images.length > 0 ? JSON.stringify(updatedPattern.images) : null,
-          }
+        projectId: parseInt(updatedPattern.id),
+        input: {
+          name: updatedPattern.name,
+          patternText: updatedPattern.notation,
+          translatedText: updatedPattern.instructions,
+          difficultyLevel: updatedPattern.difficulty,
+          estimatedTime: updatedPattern.estimatedTime,
+          yarnWeight: updatedPattern.materials,
+          imageData: updatedPattern.images && updatedPattern.images.length > 0 ? JSON.stringify(updatedPattern.images) : null,
         }
       });
       await fetchProjects();

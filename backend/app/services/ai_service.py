@@ -358,6 +358,26 @@ class AIService:
         else:
             return "general"
 
+    def _detect_mime_type(self, data: bytes) -> str:
+        """Detect MIME type from file magic bytes"""
+        # Check magic bytes (file signatures)
+        if data[:4] == b'%PDF':
+            return "application/pdf"
+        elif data[:2] == b'\xff\xd8':
+            return "image/jpeg"
+        elif data[:8] == b'\x89PNG\r\n\x1a\n':
+            return "image/png"
+        elif data[:6] in (b'GIF87a', b'GIF89a'):
+            return "image/gif"
+        elif data[:2] in (b'BM', b'BA'):
+            return "image/bmp"
+        elif data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+            return "image/webp"
+        else:
+            # Default to JPEG if unknown (most common for photos)
+            print(f"Warning: Unknown file type, defaulting to image/jpeg. First bytes: {data[:10].hex()}")
+            return "image/jpeg"
+
     async def _translate_with_gemini(self, pattern_text: str, context: str, complexity: str = "complex") -> str:
         """Use best available Gemini model for pattern translation"""
         try:
@@ -495,9 +515,13 @@ Always be encouraging and provide practical, actionable advice."""
                     for img_base64 in image_list:
                         # Gemini SDK expects Part objects with inline_data
                         img_bytes = base64.b64decode(img_base64)
+
+                        # Detect MIME type from magic bytes
+                        mime_type = self._detect_mime_type(img_bytes)
+
                         parts.append(types.Part.from_bytes(
                             data=img_bytes,
-                            mime_type="image/jpeg"
+                            mime_type=mime_type
                         ))
                     contents = parts
                 except (json.JSONDecodeError, base64.binascii.Error) as e:
@@ -924,9 +948,13 @@ Always be encouraging and provide practical, actionable advice."""
                     for img_base64 in image_list:
                         # Gemini SDK expects Part objects with inline_data
                         img_bytes = base64.b64decode(img_base64)
+
+                        # Detect MIME type from magic bytes
+                        mime_type = self._detect_mime_type(img_bytes)
+
                         parts.append(types.Part.from_bytes(
                             data=img_bytes,
-                            mime_type="image/jpeg"
+                            mime_type=mime_type
                         ))
                     contents = parts
                 except (json.JSONDecodeError, base64.binascii.Error) as e:
