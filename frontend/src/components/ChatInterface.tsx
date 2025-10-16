@@ -23,11 +23,12 @@ interface ChatInterfaceProps {
   chatHistory: ChatMessage[];
   onSendMessage: (message: string, images?: string[]) => void;
   loading?: boolean;
+  conversationLoading?: boolean;
   hideHeader?: boolean;
   onNewChat?: () => void;
 }
 
-export function ChatInterface({ chatHistory, onSendMessage, loading = false, hideHeader = false, onNewChat }: ChatInterfaceProps) {
+export function ChatInterface({ chatHistory, onSendMessage, loading = false, conversationLoading = false, hideHeader = false, onNewChat }: ChatInterfaceProps) {
   const [message, setMessage] = useState('');
   const [pastedImages, setPastedImages] = useState<string[]>([]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -135,14 +136,26 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, hid
 
       <ScrollArea className="flex-1 p-6 overflow-auto" ref={scrollAreaRef}>
         <div className="space-y-4 max-w-4xl mx-auto min-h-full">
-          {chatHistory.length === 0 ? (
+          {conversationLoading ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageCircle className="h-8 w-8 text-muted-foreground animate-pulse" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Loading conversation...</h3>
+              <div className="flex items-center gap-1 justify-center">
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+              </div>
+            </div>
+          ) : chatHistory.length === 0 ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageCircle className="h-8 w-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-medium mb-2">Start a conversation</h3>
               <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Paste your crochet pattern or ask me to explain any crochet notation. 
+                Paste your crochet pattern or ask me to explain any crochet notation.
                 I can help translate abbreviations and create readable instructions.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-lg mx-auto">

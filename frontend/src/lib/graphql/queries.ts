@@ -13,6 +13,7 @@ export const GET_PROJECTS = gql`
       hookSize
       notes
       isCompleted
+      imageData
       userId
       createdAt
       updatedAt
@@ -33,6 +34,7 @@ export const GET_PROJECT = gql`
       hookSize
       notes
       isCompleted
+      imageData
       userId
       createdAt
       updatedAt
@@ -47,6 +49,34 @@ export const GET_CHAT_MESSAGES = gql`
       message
       response
       messageType
+      projectId
+      userId
+      createdAt
+    }
+  }
+`;
+
+export const GET_CONVERSATIONS = gql`
+  query GetConversations($limit: Int) {
+    conversations(limit: $limit) {
+      id
+      title
+      userId
+      createdAt
+      updatedAt
+      messageCount
+    }
+  }
+`;
+
+export const GET_CHAT_MESSAGES_BY_CONVERSATION = gql`
+  query GetChatMessagesByConversation($conversationId: Int!, $limit: Int) {
+    chatMessages(conversationId: $conversationId, limit: $limit) {
+      id
+      message
+      response
+      messageType
+      conversationId
       projectId
       userId
       createdAt

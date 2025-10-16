@@ -1,6 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState, useRef, useEffect } from 'react';
-import { Search, BookOpen, Download, Heart, Eye, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react';
+import { Search, BookOpen, Download, Heart, Eye, Plus, Trash2, Upload, Image as ImageIcon, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader } from './ui/card';
@@ -52,6 +52,80 @@ interface ViewerImage {
   caption: string;
   uploadedAt: Date;
   type: 'progress' | 'chart' | 'reference';
+}
+
+// Helper function to detect if base64 string is a PDF
+const isPDF = (base64String: string): boolean => {
+  // Check for data URL format
+  if (base64String.startsWith('data:application/pdf')) return true;
+
+  // Check for PDF magic number (JVBERi0 = "%PDF-" in base64)
+  if (base64String.startsWith('JVBERi0')) return true;
+
+  // Check for JPEG magic number - if it's NOT a JPEG, might be PDF
+  // /9j/ is the base64 for JPEG magic bytes (0xFF 0xD8 0xFF)
+  if (base64String.startsWith('/9j/')) return false; // Definitely a JPEG
+
+  // For raw base64 without prefix, decode first few bytes to check
+  try {
+    const decoded = atob(base64String.substring(0, 8));
+    return decoded.startsWith('%PDF');
+  } catch {
+    return false;
+  }
+};
+
+// Helper function to ensure proper data URL format
+const ensureDataUrl = (base64String: string): string => {
+  // Already has data URL prefix
+  if (base64String.startsWith('data:')) return base64String;
+
+  // Detect if it's a PDF and add appropriate prefix
+  if (isPDF(base64String)) {
+    return `data:application/pdf;base64,${base64String}`;
+  }
+
+  // Default to JPEG for images
+  return `data:image/jpeg;base64,${base64String}`;
+};
+
+// Helper component to render either image or PDF
+interface MediaDisplayProps {
+  src: string;
+  alt: string;
+  className?: string;
+  onClick?: () => void;
+}
+
+function MediaDisplay({ src, alt, className, onClick }: MediaDisplayProps) {
+  const dataUrl = ensureDataUrl(src);
+
+  if (isPDF(src)) {
+    return (
+      <div className={`relative ${className}`} onClick={onClick}>
+        <object
+          data={dataUrl}
+          type="application/pdf"
+          className="w-full h-full"
+        >
+          <div className="flex flex-col items-center justify-center h-full bg-muted p-4">
+            <FileText className="h-12 w-12 text-muted-foreground mb-2" />
+            <p className="text-xs text-muted-foreground">PDF Document</p>
+          </div>
+        </object>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={dataUrl}
+      alt={alt}
+      className={className}
+      onClick={onClick}
+      draggable={false}
+    />
+  );
 }
 
 // Enhanced Image Viewer Component
@@ -208,18 +282,40 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
           {currentIndex + 1} / {images.length}
         </div>
 
-        {/* Image */}
-        <img
-          src={images[currentIndex]?.url}
-          alt={images[currentIndex]?.caption}
-          className="max-w-[90vw] max-h-[90vh] object-contain select-none"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-            transition: isDragging ? 'none' : 'transform 0.1s ease-out',
-          }}
-          draggable={false}
-          onDoubleClick={handleDoubleClick}
-        />
+        {/* Image or PDF */}
+        {isPDF(images[currentIndex]?.url) ? (
+          <div className="max-w-[90vw] max-h-[90vh] w-full h-full flex items-center justify-center">
+            <object
+              data={ensureDataUrl(images[currentIndex]?.url)}
+              type="application/pdf"
+              className="w-full h-full max-w-[800px] max-h-[90vh]"
+            >
+              <div className="flex flex-col items-center justify-center h-full bg-muted p-8 rounded">
+                <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">PDF Document</p>
+                <a
+                  href={ensureDataUrl(images[currentIndex]?.url)}
+                  download="pattern.pdf"
+                  className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                >
+                  Download PDF
+                </a>
+              </div>
+            </object>
+          </div>
+        ) : (
+          <img
+            src={ensureDataUrl(images[currentIndex]?.url)}
+            alt={images[currentIndex]?.caption}
+            className="max-w-[90vw] max-h-[90vh] object-contain select-none"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+            }}
+            draggable={false}
+            onDoubleClick={handleDoubleClick}
+          />
+        )}
       </div>
     </div>
   );
@@ -460,12 +556,17 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {(selectedPattern.images || []).map((image, index) => (
                       <div key={index} className="relative group">
-                        <img
+                        <MediaDisplay
                           src={image}
                           alt={`Pattern image ${index + 1}`}
                           className="w-full aspect-square object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                           onClick={() => openLightbox(index)}
                         />
+                        {isPDF(image) && (
+                          <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded pointer-events-none">
+                            PDF
+                          </div>
+                        )}
                         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                           <Button
                             variant="secondary"
@@ -689,13 +790,20 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                 <CardHeader className="pb-4">
                   <div className="flex items-start gap-4">
                     {/* Thumbnail */}
-                    <div className="w-[120px] h-[120px] flex-shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                    <div className="w-[120px] h-[120px] flex-shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center relative">
                       {pattern.thumbnailUrl ? (
-                        <img
-                          src={pattern.thumbnailUrl}
-                          alt={pattern.name}
-                          className="w-full h-full object-cover"
-                        />
+                        <>
+                          <MediaDisplay
+                            src={pattern.thumbnailUrl}
+                            alt={pattern.name}
+                            className="w-full h-full object-cover"
+                          />
+                          {isPDF(pattern.thumbnailUrl) && (
+                            <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded">
+                              PDF
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <ImageIcon className="h-10 w-10 text-muted-foreground" />
                       )}
