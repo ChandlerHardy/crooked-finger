@@ -225,11 +225,11 @@ export function PatternCreationAI({ onPatternExtracted }: PatternCreationAIProps
     // Build context message with system prompt
     let contextMessage = `SYSTEM CONTEXT: You are an AI assistant embedded in a pattern creation form. Your responses will be automatically parsed to populate the pattern fields. When the user provides pattern information (via text or images), respond in this EXACT format:
 
-NAME: [Pattern name - descriptive title like "Granny Square" or "Simple Beanie"]
-NOTATION: [Abbreviated crochet notation using standard abbreviations like ch, dc, sc, etc.]
+NAME: [Pattern name - descriptive title like "Granny Square", "Simple Beanie", or "Cable Knit Scarf"]
+NOTATION: [Abbreviated pattern notation using standard abbreviations - crochet: ch, dc, sc, etc.; knitting: CO, k, p, etc.]
 INSTRUCTIONS: [Full step-by-step instructions in plain English with line breaks between rounds/rows]
 DIFFICULTY: [beginner, intermediate, or advanced]
-MATERIALS: [Yarn weight, hook size, and supplies]
+MATERIALS: [Yarn/fiber weight, hook/needle size, and supplies]
 TIME: [Estimated completion time]
 
 IMPORTANT: Use this exact format with these exact header names. The app will extract these sections and auto-populate the pattern creation form.
@@ -268,7 +268,7 @@ IMPORTANT: Use this exact format with these exact header names. The app will ext
 
       const variables: Record<string, unknown> = {
         message: contextMessage,
-        context: 'crochet_pattern_assistant',
+        context: 'crochet_knitting_pattern_assistant',
       };
 
       // Convert images array to JSON string (matching iOS implementation)
@@ -350,7 +350,7 @@ IMPORTANT: Use this exact format with these exact header names. The app will ext
               </div>
               <h3 className="text-lg font-medium mb-2">AI Pattern Assistant</h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Upload images or PDFs of crochet patterns, or describe what you&apos;d like to create.
+                Upload images or PDFs of crochet or knitting patterns, or describe what you&apos;d like to create.
                 I&apos;ll help extract the pattern details and fill in the form for you.
               </p>
             </div>

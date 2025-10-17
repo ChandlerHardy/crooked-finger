@@ -388,17 +388,17 @@ class AIService:
 
             model_name = selected_model.value["name"]
 
-            system_prompt = """You are an expert crochet instructor. Your job is to translate standard crochet notation into clear, easy-to-follow instructions for beginners and intermediate crocheters.
+            system_prompt = """You are an expert crochet and knitting instructor. Your job is to translate standard crochet and knitting notation into clear, easy-to-follow instructions for beginners and intermediate crafters.
 
 Rules for translation:
-- Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
+- Expand all abbreviations (sc = single crochet, dc = double crochet, k = knit, p = purl, etc.)
 - Break down complex instructions into numbered steps
 - Explain stitch counts and placement clearly
 - Add helpful tips for tricky techniques
 - Use encouraging, friendly language
 - Include warnings about common mistakes"""
 
-            user_prompt = f"""Please translate this crochet pattern into clear, step-by-step instructions:
+            user_prompt = f"""Please translate this crochet or knitting pattern into clear, step-by-step instructions:
 
 PATTERN:
 {pattern_text}
@@ -445,7 +445,7 @@ Provide detailed, beginner-friendly instructions."""
 
             # Enhanced system prompt for image analysis
             if image_data:
-                system_prompt = """You are an expert crochet instructor and pattern designer. Analyze the image and extract the crochet pattern.
+                system_prompt = """You are an expert crochet and knitting instructor and pattern designer. Analyze the image and extract the crochet or knitting pattern.
 
 Format your response EXACTLY like this example (do NOT use numbered lists):
 
@@ -470,13 +470,14 @@ CRITICAL FORMATTING RULES:
 - Separate each major section with blank lines
 - Use the exact header format: "NAME:", "NOTATION:", "INSTRUCTIONS:", etc."""
             else:
-                system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
-- Crochet technique questions
+                system_prompt = """You are a friendly, expert crochet and knitting instructor and pattern designer. Help users with:
+- Crochet and knitting technique questions
 - Pattern interpretation and clarification
 - Troubleshooting common problems
-- Yarn and hook recommendations
+- Yarn, fiber, and hook/needle recommendations
 - Project planning and modifications
 - Stitch counting and pattern adjustments
+- Converting between crochet and knitting patterns when possible
 
 Format your responses with clear paragraph breaks for readability.
 
@@ -552,17 +553,17 @@ Always be encouraging and provide practical, actionable advice."""
 
     async def _translate_with_openrouter(self, pattern_text: str, context: str) -> str:
         """Use OpenRouter models for pattern translation with fallback"""
-        system_prompt = """You are an expert crochet instructor. Your job is to translate standard crochet notation into clear, easy-to-follow instructions for beginners and intermediate crocheters.
+        system_prompt = """You are an expert crochet and knitting instructor. Your job is to translate standard crochet and knitting notation into clear, easy-to-follow instructions for beginners and intermediate crafters.
 
 Rules for translation:
-- Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
+- Expand all abbreviations (sc = single crochet, dc = double crochet, k = knit, p = purl, etc.)
 - Break down complex instructions into numbered steps
 - Explain stitch counts and placement clearly
 - Add helpful tips for tricky techniques
 - Use encouraging, friendly language
 - Include warnings about common mistakes"""
 
-        user_prompt = f"""Please translate this crochet pattern into clear, step-by-step instructions:
+        user_prompt = f"""Please translate this crochet or knitting pattern into clear, step-by-step instructions:
 
 PATTERN:
 {pattern_text}
@@ -616,20 +617,21 @@ Provide detailed, beginner-friendly instructions."""
         return f"Error with OpenRouter (all models failed): {str(last_error)}"
 
     async def _chat_with_openrouter(self, message: str, project_context: str, chat_history: str, image_data: Optional[str] = None) -> str:
-        """Use OpenRouter models for crochet chat with fallback (image support not yet implemented)"""
+        """Use OpenRouter models for crochet/knitting chat with fallback (image support not yet implemented)"""
         # TODO: Add image support for OpenRouter models that support it
         if image_data:
             print("Warning: Image data provided but OpenRouter image support not yet implemented")
         # Use RAG to analyze user request and enhance context
         user_analysis = rag_service.analyze_user_request(message)
 
-        system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
-- Crochet technique questions
+        system_prompt = """You are a friendly, expert crochet and knitting instructor and pattern designer. Help users with:
+- Crochet and knitting technique questions
 - Pattern interpretation and clarification
 - Troubleshooting common problems
-- Yarn and hook recommendations
+- Yarn, fiber, and hook/needle recommendations
 - Project planning and modifications
 - Stitch counting and pattern adjustments
+- Converting between crochet and knitting patterns when possible
 
 NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
 
@@ -697,16 +699,16 @@ Always be encouraging and provide practical, actionable advice."""
 
     async def _translate_with_specific_openrouter_model(self, pattern_text: str, user_context: str, model_name: str) -> str:
         """Translate pattern using a specific OpenRouter model"""
-        system_prompt = """You are an expert crochet pattern translator. Convert abbreviated crochet patterns into clear, readable instructions.
+        system_prompt = """You are an expert crochet and knitting pattern translator. Convert abbreviated crochet and knitting patterns into clear, readable instructions.
 
 Key responsibilities:
-- Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
+- Expand all abbreviations (sc = single crochet, dc = double crochet, k = knit, p = purl, etc.)
 - Explain stitch placement and technique
 - Maintain the original pattern structure (rounds/rows)
 - Provide context for complex stitches
 - Be precise with stitch counts and placement"""
 
-        user_prompt = f"""Translate this crochet pattern into clear instructions:
+        user_prompt = f"""Translate this crochet or knitting pattern into clear instructions:
 
 {pattern_text}
 
@@ -757,16 +759,16 @@ Provide a clear, step-by-step translation."""
 
     async def _translate_with_specific_gemini_model(self, pattern_text: str, user_context: str, model_name: str) -> str:
         """Translate pattern using a specific Gemini model"""
-        system_instruction = """You are an expert crochet pattern translator. Convert abbreviated crochet patterns into clear, readable instructions.
+        system_instruction = """You are an expert crochet and knitting pattern translator. Convert abbreviated crochet and knitting patterns into clear, readable instructions.
 
 Key responsibilities:
-- Expand all abbreviations (sc = single crochet, dc = double crochet, etc.)
+- Expand all abbreviations (sc = single crochet, dc = double crochet, k = knit, p = purl, etc.)
 - Explain stitch placement and technique
 - Maintain the original pattern structure (rounds/rows)
 - Provide context for complex stitches
 - Be precise with stitch counts and placement"""
 
-        user_prompt = f"""Translate this crochet pattern into clear instructions:
+        user_prompt = f"""Translate this crochet or knitting pattern into clear instructions:
 
 {pattern_text}
 
@@ -815,13 +817,14 @@ Provide a clear, step-by-step translation."""
             print("Warning: Image data provided but OpenRouter image support not yet implemented")
         user_analysis = rag_service.analyze_user_request(message)
 
-        system_prompt = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
-- Crochet technique questions
+        system_prompt = """You are a friendly, expert crochet and knitting instructor and pattern designer. Help users with:
+- Crochet and knitting technique questions
 - Pattern interpretation and clarification
 - Troubleshooting common problems
-- Yarn and hook recommendations
+- Yarn, fiber, and hook/needle recommendations
 - Project planning and modifications
 - Stitch counting and pattern adjustments
+- Converting between crochet and knitting patterns when possible
 
 NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
 
@@ -888,31 +891,32 @@ Always be encouraging and provide practical, actionable advice."""
 
         # Enhanced system instruction for image analysis
         if image_data:
-            system_instruction = """You are an expert crochet instructor and pattern designer. When analyzing images of crochet patterns, provide:
+            system_instruction = """You are an expert crochet and knitting instructor and pattern designer. When analyzing images of crochet or knitting patterns, provide:
 
 1. **Pattern Name**: A descriptive name for the pattern shown
-2. **Pattern Notation**: The abbreviated crochet notation (e.g., "ch 4, 12 dc in ring, sl st to join")
+2. **Pattern Notation**: The abbreviated notation (crochet: "ch 4, 12 dc in ring, sl st to join", knitting: "CO 40, k2, p2 rib for 1 inch")
 3. **Detailed Instructions**: Step-by-step instructions in plain English with clear paragraph breaks between rounds/rows
 4. **Difficulty Level**: beginner, intermediate, or advanced
-5. **Materials**: Yarn weight, hook size, and other supplies needed
+5. **Materials**: Yarn weight, hook/needle size, and other supplies needed
 6. **Estimated Time**: How long to complete (if determinable)
 7. **Special Notes**: Any unique techniques or tips
 
 Format your instructions with:
 - Clear paragraph breaks between each round/row
-- Numbered rounds/rows (e.g., "Round 1:", "Round 2:")
+- Numbered rounds/rows (e.g., "Round 1:", "Round 2:" or "Row 1:", "Row 2:")
 - Double line breaks between sections
 - Bullet points for materials lists
 
 Be thorough, accurate, and encouraging. Focus on making the pattern easy to follow."""
         else:
-            system_instruction = """You are a friendly, expert crochet instructor and pattern designer. Help users with:
-- Crochet technique questions
+            system_instruction = """You are a friendly, expert crochet and knitting instructor and pattern designer. Help users with:
+- Crochet and knitting technique questions
 - Pattern interpretation and clarification
 - Troubleshooting common problems
-- Yarn and hook recommendations
+- Yarn, fiber, and hook/needle recommendations
 - Project planning and modifications
 - Stitch counting and pattern adjustments
+- Converting between crochet and knitting patterns when possible
 
 Format your responses with clear paragraph breaks for readability.
 

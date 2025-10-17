@@ -373,7 +373,7 @@ class Mutation:
         message: str,
         context: Optional[str] = None
     ) -> str:
-        """Chat with AI assistant about crochet patterns and techniques"""
+        """Chat with AI assistant about crochet and knitting patterns and techniques"""
         db = next(get_db())
         try:
             # Get recent chat history for context (generous limit with 1M token context window)
@@ -546,22 +546,22 @@ class Mutation:
         video_id: Optional[str] = None,
         thumbnail_url: Optional[str] = None
     ) -> ExtractedPattern:
-        """Extract crochet pattern from YouTube video transcript using AI"""
+        """Extract crochet or knitting pattern from YouTube video transcript using AI"""
         try:
             # Use AI to extract pattern information from transcript
             # Gemini 2.5 Flash has 1M token context, so we can use most of the transcript
             # Limit to ~100k characters (~25k tokens) to be safe
-            prompt = f"""Analyze this YouTube video transcript and extract a crochet pattern if present.
+            prompt = f"""Analyze this YouTube video transcript and extract a crochet or knitting pattern if present.
 
 Transcript:
 {transcript[:100000]}
 
 Please extract and format:
 1. Pattern Name: A descriptive name for the pattern
-2. Pattern Notation: The abbreviated crochet notation (e.g., "ch 4, 12 dc in ring, sl st")
+2. Pattern Notation: The abbreviated notation (crochet: "ch 4, 12 dc in ring, sl st", knitting: "CO 40, k2, p2 rib")
 3. Pattern Instructions: Step-by-step instructions in plain English
 4. Difficulty Level: beginner, intermediate, or advanced
-5. Materials: What yarn weight, hook size, etc. are mentioned
+5. Materials: What yarn/fiber weight, hook/needle size, etc. are mentioned
 6. Estimated Time: If mentioned, how long to complete
 
 If no clear pattern is found, return null for pattern fields and explain what was found instead.
@@ -601,7 +601,7 @@ TIME: [estimated time]
             else:
                 return ExtractedPattern(
                     success=False,
-                    error="Could not extract a clear crochet pattern from the transcript",
+                    error="Could not extract a clear crochet or knitting pattern from the transcript",
                     video_id=video_id,
                     thumbnail_url=thumbnail_url
                 )
@@ -647,7 +647,7 @@ async def _chat_with_diagram_generation(message: str, context: Optional[str], ch
                 return ai_response + "\n\n⚠️ I couldn't create a diagram from this pattern. Please provide a clearer pattern with round/row structure."
         else:
             # If no pattern found, offer to create an example
-            example_response = f"\n\n📊 **I can create diagrams when you provide a crochet pattern!**\n\n"
+            example_response = f"\n\n📊 **I can create diagrams when you provide a crochet or knitting pattern!**\n\n"
             example_response += "Here's what I can visualize:\n"
             example_response += "- Round-based patterns (like amigurumi or granny squares)\n"
             example_response += "- Row-based patterns (like scarves or blankets)\n"
