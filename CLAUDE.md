@@ -1,12 +1,12 @@
 # Claude Code Project Information
 
 ## Project Overview
-Crooked Finger - A crochet pattern assistant with AI-powered pattern translation and diagram generation.
+Crooked Finger - A crochet and knitting pattern assistant with AI-powered pattern translation and diagram generation.
 
 ## Tech Stack
 - **Frontend**: Next.js 15 + TypeScript, Tailwind CSS, Apollo GraphQL
 - **Backend**: FastAPI + Strawberry GraphQL, PostgreSQL
-- **AI**: Multi-Model Gemini System (Pro + Flash Preview + Flash + Flash-Lite)
+- **AI**: Multi-Model System (Gemini + OpenRouter) - Gemini for quality, OpenRouter for free unlimited
 - **Diagram Generation**: Professional matplotlib charts + traditional SVG generators
 - **Deployment**: Vercel (frontend) + Oracle Cloud Infrastructure (backend)
 
@@ -41,13 +41,13 @@ Crooked Finger - A crochet pattern assistant with AI-powered pattern translation
 - `NEXT_PUBLIC_GRAPHQL_URL=https://backend.chandlerhardy.com/crooked-finger/graphql`
 
 ## Core Features
-1. **Pattern Translation**: Convert crochet notation to readable instructions
-2. **AI Assistant**: Multi-model Gemini chat interface for pattern clarification
-3. **Conversation Management**: Cross-platform chat sync with conversation history (Oct 5, 2025)
+1. **Pattern Translation**: Convert crochet/knitting notation to readable instructions
+2. **AI Assistant**: Multi-model AI (Gemini + OpenRouter) with smart routing and image support
+3. **Conversation Management**: Cross-platform chat sync with conversation history
 4. **Professional Diagram Generation**: matplotlib-based crochet charts with authentic symbols
-5. **YouTube Transcript Extraction**: Extract patterns from crochet tutorial videos
-6. **Pattern Library**: Browse, save, and manage crochet patterns with image galleries
-7. **Project Management**: Track crochet projects with images, notes, and chat history
+5. **YouTube Transcript Extraction**: Extract patterns from craft tutorial videos via RapidAPI
+6. **Pattern Library**: Browse, save, and manage patterns with image galleries and PDF support
+7. **Project Management**: Track projects with images, notes, and chat history
 8. **Professional Image Viewer**: Zoom, pan, and navigate project/pattern images
 9. **User Authentication**: JWT-based login/register with Argon2 password hashing
 
@@ -185,38 +185,39 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 
 **Note**: Simply having the key in `.env` is NOT enough - it must be explicitly passed in docker-compose.yml
 
-## 🤖 AI Integration - Google AI Studio (Gemini)
-**Multi-Model Smart Routing System** ⭐ **FULLY OPERATIONAL**
+## 🤖 AI Integration
+**Multi-Provider Smart Routing System** ⭐ **FULLY OPERATIONAL**
 
-### 4-Tier Model System
+### AI Models Available
+**OpenRouter (Free & Unlimited):**
+- **Qwen 3 30B**: High-quality free model with no rate limits
+- **DeepSeek Chat v3.1**: Fast free model for quick responses
+
+**Gemini (High Quality with Daily Quotas):**
 - **Gemini 2.5 Pro**: 100 requests/day - Premium quality for complex pattern analysis
 - **Gemini 2.5 Flash Preview**: 250 requests/day - Latest features and fast performance
 - **Gemini 2.5 Flash**: 400 requests/day - Balanced speed and quality
 - **Gemini 2.5 Flash-Lite**: 1,000 requests/day - High-speed for simple queries
-- **Total Daily Quota**: 1,600 requests (5x increase from single model)
 
 ### Features
 - ✅ Smart model selection based on query complexity
-- ✅ Real-time usage tracking with dashboard
-- ✅ Character and token count tracking
-- ✅ Manual usage reset capability
-- ✅ Auto-refreshing frontend dashboard with progress bars
+- ✅ Configurable fallback order with drag-to-reorder
+- ✅ Real-time usage tracking with dashboard (Gemini only)
+- ✅ Expert in both crochet and knitting patterns
+- ✅ Multimodal support (images, PDFs)
 
 ## 🎨 Professional Diagram Generation
-**matplotlib-based crochet charts with authentic symbols**
+**matplotlib-based crochet charts with authentic symbols** (knitting charts coming soon)
 
-### Granny Square Charts
+### Current Support: Crochet Charts
 - Traditional T-shaped double crochet symbols with crossbars
 - Chain oval symbols for corner spaces
 - Square-framework construction matching published patterns
-- Proper corner positioning (fixed Round 2 ch-2 chains)
 - Intelligent pattern detection for diagram requests
 
 ### Diagram Services
 - `matplotlib_crochet_service.py` - Primary chart generation
-- `granny_square_service.py` - SVG granny squares
-- `flowing_granny_service.py` - Flowing granny variants
-- `rag_service.py` - Chart knowledge enhancement
+- `granny_square_service.py` - SVG granny squares (multiple styles)
 
 ## 🖼️ Professional Image Viewer
 **Zoom, pan, and navigate project/pattern images** ✅ **COMPLETED**
@@ -237,20 +238,14 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - React Hooks for state management
 
 ## 📺 YouTube Transcript Extraction
-**Extract patterns from crochet tutorial videos** ✅ **OPERATIONAL**
+**Extract patterns from crochet/knitting tutorial videos** ✅ **OPERATIONAL**
 
 ### Features
-- Fetch transcripts from YouTube videos (youtube-transcript-api v1.2.2)
+- Fetch transcripts via RapidAPI (100 requests/month free tier)
 - Support for auto-generated and manual captions
 - Automatic thumbnail fetching (maxresdefault + hqdefault fallback)
-- Rate limiting protection (2-second delays)
 - Multiple URL formats: youtube.com/watch?v=, youtu.be/, video IDs
-
-### Pattern Library Integration
-- YouTube patterns save to library with thumbnails
-- localStorage persistence (PostgreSQL integration pending)
-- Pattern detail pages with full metadata
-- Multi-image galleries with lightbox viewer
+- Patterns save to library with thumbnails and full metadata
 
 ## 📊 Key Differences from CryptAssist
 1. **Port**: 8001 instead of 8000
@@ -280,157 +275,38 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - ✅ **Docker Healthcheck**: Fixed from curl to Python urllib (Oct 5, 2025)
 
 ## 📱 iOS App Development
-**Status**: ✅ **PATTERNS & PROJECTS BACKEND INTEGRATION COMPLETE**
+**Status**: ✅ **FEATURE PARITY WITH WEB APP**
 
-### Completed Features
-- ✅ SwiftUI app with tab navigation (Chat, Projects, Patterns, Settings)
-- ✅ GraphQL client using URLSession (no Apollo codegen)
-- ✅ Pattern library with backend integration (create, read, delete)
-- ✅ Project management with backend integration
-- ✅ Authentication system (login/register/logout) - **FULLY ENABLED**
-- ✅ **Conversation Management** - Backend sync for cross-platform chat (Oct 5, 2025)
-- ✅ AI Chat interface with full backend integration
-- ✅ Clean brown/tan color scheme matching web app
-- ✅ Empty state views with helpful messaging
-- ✅ Pull-to-refresh on lists
-- ✅ Error handling with copy-to-clipboard
+### Key Implementation Notes
+- **SwiftUI** app with tab navigation (Chat, Projects, Patterns, Settings)
+- **Custom GraphQL Client**: URLSession-based (no Apollo codegen needed)
+- **Authentication**: JWT with Argon2 password hashing, token storage in UserDefaults
+- **Cross-Platform Sync**: Conversations and messages sync with backend PostgreSQL
+- **Pattern/Project Distinction**: Filtered by `notes` field (null = pattern template, not null = active project)
+- **iOS Repository**: `/Users/chandlerhardy/repos/crooked-finger-ios/`
 
-### iOS-Specific Implementation Notes
-- **GraphQL Client**: Custom implementation in `GraphQLClient.swift` using native URLSession
-- **Response Parsing**: Uses native Swift dictionaries instead of Codable structs for GraphQL variables to avoid JSON encoding issues
-- **Pattern/Project Distinction**: Same backend table (`CrochetProject`), filtered by `notes` field:
-  - Patterns: `notes == null` (templates for reuse)
-  - Projects: `notes != null` (active projects being worked on)
-- **Create Project from Pattern**: Duplicates pattern with notes to mark as active project
-- **Conversation Sync**: iOS creates backend conversation on first message, stores `backendId` for cross-platform access
-  - Local cache in UserDefaults for offline capability
-  - Auto-generates titles from first user message
-  - Cascade delete of messages when conversation is deleted
-
-### Authentication Status
-✅ **FULLY ENABLED** - Authentication system complete (Oct 4, 2025)
-
-**What was implemented:**
-- Full JWT authentication system (login, register, logout)
-- Token storage in UserDefaults with persistence
-- AuthViewModel for state management
-- Login/Register views with form validation
-- Protected app navigation (LoginView ↔ TabNavigationView)
-- Authorization header automatically added to GraphQL requests
-
-**Backend Migration (Oct 4, 2025):**
-- ✅ Migrated from `passlib[bcrypt]` to `argon2-cffi` for password hashing
-- ✅ Fixed `get_context()` to manually get db session (Depends doesn't work in context_getter)
-- ✅ Removed `request.user = user` line (FastAPI Request has no setter)
-- ✅ Deployed to production with Argon2 hashing
-- ✅ All existing users with bcrypt hashes updated to Argon2
-
-**Admin Account:**
-- Admin credentials available in private Notion documentation
-- Created: October 5, 2025
-
-**Key Files Changed:**
-- `backend/requirements.txt`: Replaced `passlib[bcrypt]==1.7.4` → `argon2-cffi==23.1.0`
-- `backend/app/utils/auth.py`: Uses `PasswordHasher()` from argon2
-- `backend/app/main.py`: Fixed context_getter db session handling
-- `Crooked_Finger_iOSApp.swift`: Conditional rendering based on `isAuthenticated`
-- `GraphQLClient.swift`: Auth header re-enabled (lines 53-59)
-
-**Future Enhancements:**
-1. Migrate iOS token storage from UserDefaults to Keychain
-2. Implement JWT token refresh mechanism
-3. Add biometric authentication (Face ID/Touch ID)
-4. Implement web app login/register UI (currently iOS-only)
-
-### iOS File Structure
-```
-crooked-finger-ios/
-├── Crooked Finger iOS/
-│   ├── App/
-│   │   └── Crooked_Finger_iOSApp.swift      # App entry point
-│   ├── Services/
-│   │   └── GraphQL/
-│   │       ├── GraphQLClient.swift           # URLSession-based GraphQL client
-│   │       └── GraphQLOperations.swift       # Query/mutation strings + response types
-│   ├── ViewModels/
-│   │   ├── AuthViewModel.swift               # Authentication state
-│   │   ├── ChatViewModel.swift               # Chat + conversation management
-│   │   ├── PatternViewModel.swift            # Pattern CRUD operations
-│   │   └── ProjectViewModel.swift            # Project CRUD operations
-│   ├── Models/
-│   │   ├── ChatMessage.swift                 # Chat message data model
-│   │   ├── Conversation.swift                # Conversation data model
-│   │   ├── Pattern.swift                     # Pattern data model
-│   │   └── Project.swift                     # Project data model
-│   ├── Views/
-│   │   ├── Auth/
-│   │   │   ├── LoginView.swift               # Login form
-│   │   │   └── RegisterView.swift            # Registration form
-│   │   ├── Patterns/
-│   │   │   ├── PatternLibraryView.swift      # Pattern list with search
-│   │   │   └── PatternDetailView.swift       # Pattern details + create project
-│   │   ├── Projects/
-│   │   │   ├── ProjectsView.swift            # Project list
-│   │   │   └── ProjectDetailView.swift       # Project management
-│   │   ├── Chat/
-│   │   │   ├── ChatView.swift                # AI chat interface
-│   │   │   └── MessageRowView.swift          # Chat message cells
-│   │   ├── Settings/
-│   │   │   └── SettingsView.swift            # Settings + logout
-│   │   └── Navigation/
-│   │       └── TabNavigationView.swift       # Main tab bar
-│   └── Utilities/
-│       ├── Constants.swift                   # API URLs, app constants
-│       ├── Colors.swift                      # Color scheme
-│       └── EmptyStateView.swift              # Reusable empty states
-```
+### Future iOS Enhancements
+- Migrate token storage from UserDefaults to Keychain
+- Add biometric authentication (Face ID/Touch ID)
+- Implement JWT token refresh mechanism
 
 ## 🔄 Feature Parity Tracker (iOS ↔ Web)
 
-### ✅ Implemented on Both Platforms
-- Pattern Library (view, create, delete)
-- Project Management (view, create, delete)
-- AI Chat interface with multi-model Gemini + OpenRouter
-- Conversation management with backend sync
-- Conversation list sidebar with delete functionality
-- GraphQL backend integration
-- User authentication (login/register/logout)
-- **Multimodal AI image support** (paste/upload images in chat)
-- **AI model selection UI** (choose models, configure fallback order, smart routing)
-- System color scheme support (light/dark mode)
-- Error handling
-- Empty states
+### ✅ Core Features (Both Platforms)
+- Pattern/Project Management, AI Chat, Conversation Management, Authentication
+- Multimodal AI (images in chat), AI model selection with smart routing
+- GraphQL backend integration, Error handling, Empty states
 
-### 🌐 Web-Only Features (TODO for iOS)
-- YouTube transcript extraction UI (backend exists, iOS UI pending)
-- Pattern diagram generation (matplotlib charts)
-- Professional image viewer with zoom/pan
-- AI usage dashboard with real-time tracking
-- Pattern sharing
-
-### 📱 iOS-Only Features (TODO for Web)
-- Native pull-to-refresh gestures
-- Camera integration for photos
-- Native navigation patterns (SwiftUI)
-- Biometric authentication (Face ID/Touch ID)
-- Offline-first architecture with SwiftData
+### Platform-Specific Features
+**Web Only**: YouTube extraction UI, Diagram generation, Zoom/pan image viewer, AI usage dashboard
+**iOS Only**: Pull-to-refresh, Camera integration, Biometric auth (Face ID/Touch ID)
 
 ## 🚧 Remaining Tasks
-1. ✅ ~~**Fix Backend Authentication**~~: Resolved with Argon2 migration (Oct 4, 2025)
-2. ✅ ~~**Re-enable iOS Authentication**~~: Complete with login/register/logout flow
-3. ✅ ~~**AI Chat on iOS**~~: Complete with ChatViewModel and full backend integration
-4. ✅ ~~**Backend Conversation Sync**~~: Complete with conversation management (Oct 5, 2025)
-5. ✅ ~~**Implement Web Authentication**~~: Complete with login/register modal (Oct 13, 2025)
-6. ✅ ~~**Web Conversation UI**~~: Complete with conversation list sidebar (Oct 13, 2025)
-7. ✅ ~~**Multimodal AI on Web**~~: Complete with image paste/upload support (Oct 13, 2025)
-8. ✅ ~~**AI Model Selection Web**~~: Complete with smart routing and fallback config (Oct 13, 2025)
-9. **YouTube Integration on iOS**: Add video transcript extraction UI
-10. **Image Upload on iOS**: Camera integration and base64 upload (✅ Done in iOS)
-11. **Image Viewer on iOS**: Professional zoom/pan like web
-12. **AI Usage Dashboard on iOS**: Port token usage tracking from web
-13. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
-14. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments)
-15. **Pull-to-Refresh on Web**: Add native-feeling refresh gestures
+1. **YouTube Integration on iOS**: Add video transcript extraction UI
+2. **Image Viewer on iOS**: Professional zoom/pan like web
+3. **AI Usage Dashboard on iOS**: Port token usage tracking from web
+4. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
+5. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments, knitting charts)
 
 ## 🔄 Development Workflow
 1. **Make changes** locally in `frontend/` or `backend/` directories
@@ -471,159 +347,13 @@ Both projects share the same nginx server with different paths:
 - X-Content-Type-Options: nosniff
 - TLS 1.2/1.3 only
 
-## 📝 Recent Updates
-
-### October 7, 2025 - Conversation Management & Pattern Parsing
-1. **Conversation Filtering** (`f101a15d`)
-   - Added `conversation_id` parameter to `chatMessages` query
-   - Changed message ordering to ascending (chronological)
-   - Added `AIModelConfig` database model for persisting AI config
-   - AI service now saves/loads configuration from database
-
-2. **YouTube Pattern Parsing Fix** (`d535ab54`)
-   - Fixed instruction duplication bug in YouTube transcript extraction
-   - Improved regex with lookahead patterns to prevent greedy matching
-   - Added first-line extraction for NAME, DIFFICULTY, and TIME fields
-   - Prevents entire pattern content from being captured in title field
-   - Location: `backend/app/schemas/mutations.py` `_parse_pattern_response()`
-
-### October 6, 2025 - AI Provider Diversification
-1. **OpenRouter Integration** (`52e28211`)
-   - Added OpenRouter API support with Qwen3-30B-A3B free model
-   - Bypasses Gemini quota limits with unlimited free API calls
-   - Implemented `_translate_with_openrouter()` and `_chat_with_openrouter()`
-   - Updated docker-compose to use `env_file` directive for secure API key management
-   - All API keys now loaded from `backend/.env` (not committed to git)
-
-2. **RapidAPI YouTube Service** (`ddcf0e53`)
-   - Replaced blocked `youtube-transcript-api` with RapidAPI service
-   - Fixed video ID regex extraction (removed double backslashes)
-   - Added HTML entity decoding for transcript text
-   - Free tier: 100 requests/month
-   - Works from production backend (no IP blocking)
-
-### October 5, 2025 - Conversation Backend Sync
-- Implemented conversation storage in PostgreSQL
-- Cross-platform chat history sync between web and iOS
-- Added conversation management mutations (create, update, delete)
-
-### October 13, 2025 - Web App Feature Parity with iOS
-**Major Update: Web app now has feature parity with iOS for core functionality**
-
-1. **Web Authentication System** (`AuthModal.tsx`)
-   - Login/Register modal with form validation
-   - JWT token storage in localStorage
-   - Authorization headers automatically added to GraphQL requests
-   - User display in Navigation sidebar with logout functionality
-   - Password visibility toggle, error handling
-
-2. **Multimodal AI Image Support** (`ChatInterface.tsx`, `page.tsx`)
-   - Image paste/upload in chat interface (existing UI now wired to backend)
-   - Images sent to `chatWithAssistantEnhanced` with `imageData` parameter
-   - Base64 encoding/decoding for GraphQL transport
-   - Multiple image support (same as iOS)
-   - Authorization token passed with AI requests when logged in
-
-3. **AI Model Selection UI** (`AIModelSelector.tsx`)
-   - Smart routing toggle (auto-select best model based on complexity)
-   - OpenRouter default toggle (free & unlimited)
-   - Primary model selector with visual badges (Free/Quota)
-   - Fallback order display with numbered priority
-   - Configuration persistence in localStorage
-   - Matches iOS model selection functionality
-   - Located in Settings page
-
-4. **Conversation List Sidebar** (`ConversationList.tsx`)
-   - Side-by-side conversation list + chat interface
-   - New conversation button
-   - Conversation selection and switching
-   - Delete conversation with confirmation
-   - Message count and timestamp display
-   - Active conversation highlighting
-   - Empty state with call-to-action
-   - Matches iOS conversation management
-
-5. **Navigation Enhancements** (`Navigation.tsx`)
-   - User profile section showing username/email
-   - Sign In/Sign Out buttons
-   - Conditional rendering based on auth state
-   - Enhanced bottom section layout
-
-**Technical Implementation:**
-- All features use existing UI component library (shadcn/ui)
-- localStorage for client-side persistence (matching iOS UserDefaults pattern)
-- GraphQL mutations properly formatted with authorization headers
-- Type-safe TypeScript interfaces throughout
-- Responsive design with Tailwind CSS
-
-**What's New on Web (Previously iOS-only):**
-- ✅ User authentication with modal UI
-- ✅ Conversation list management
-- ✅ Multimodal AI (images in chat)
-- ✅ AI model selection and configuration
-- ✅ Authorization headers in GraphQL requests
-
-**Remaining Web Gaps:**
-- Pull-to-refresh gestures (iOS native feature)
-- Camera integration (web has file upload instead)
-- Biometric authentication (iOS Face ID/Touch ID)
-
-### October 13, 2025 (Later) - AI Model Configuration Backend Sync
-**Major Update: AI model selection now syncs with backend for proper model routing**
-
-1. **Backend Sync for AI Model Configuration**
-   - AIModelSelector now calls `setAiModel` GraphQL mutation on every config change
-   - Configuration syncs on component mount (from localStorage)
-   - Frontend model IDs automatically mapped to backend model names:
-     - `'openrouter-qwen'` → `'qwen/qwen3-30b-a3b:free'`
-     - `'openrouter-deepseek'` → `'deepseek/deepseek-chat-v3.1:free'`
-     - `'gemini-pro'` → `'gemini-2.5-pro'`
-     - `'gemini-flash-preview'` → `'gemini-2.5-flash-preview-09-2025'`
-     - `'gemini-flash'` → `'gemini-2.5-flash'`
-     - `'gemini-flash-lite'` → `'gemini-2.5-flash-lite'`
-
-2. **Fallback Order Reordering** (`AIModelSelector.tsx`)
-   - Added up/down arrow buttons for each model in fallback order
-   - Drag-free reordering with visual feedback
-   - Disabled buttons at list boundaries (first/last items)
-   - Auto-syncs new order with backend via GraphQL mutation
-   - Visual hint: "Click arrows to reorder"
-
-3. **Smart Primary Model Management**
-   - When primary model changes, automatically moves to top of fallback order
-   - Ensures primary model is always first in fallback chain
-   - All 6 models included in fallback order (previously missing qwen)
-
-4. **Image Data Format Fix** (`page.tsx`)
-   - Fixed multimodal image support to match iOS implementation
-   - Images sent as JSON string (not GraphQL array)
-   - Base64 data extracted from data URLs before sending
-   - Compatible with both web and iOS clients
-
-5. **Apollo Client Direct Calls** (`AIModelSelector.tsx`)
-   - Replaced `useMutation` hook with direct `apolloClient.mutate()` calls
-   - Fixes Next.js Turbopack module resolution issues
-   - Compatible with client component architecture
-
-**Technical Details:**
-- Location: `frontend/src/components/AIModelSelector.tsx` (lines 96-140)
-- GraphQL Mutation: `SET_AI_MODEL` added to `frontend/src/lib/graphql/mutations.ts`
-- Smart Routing: Passes `modelName: null` when enabled for complexity-based routing
-- Single Model Mode: Passes selected model name with full fallback order
-- Backend changes: None (removed unused `import json` from mutations.py)
-
-**What This Fixes:**
-- ✅ Selected model (Gemini Pro/Qwen/etc.) now properly respected by backend
-- ✅ Smart routing toggle works correctly
-- ✅ No more duplicate model prefixes in responses (e.g., `[flash-preview] [flash]`)
-- ✅ Fallback order customizable and syncs with backend
-- ✅ Configuration persists across page reloads and sessions
-
-**Files Modified:**
-- `frontend/src/components/AIModelSelector.tsx` - Backend sync + reordering UI
-- `frontend/src/lib/graphql/mutations.ts` - Added SET_AI_MODEL mutation
-- `frontend/src/app/page.tsx` - Fixed image data format for multimodal AI
-- `backend/app/schemas/mutations.py` - Removed unused import (cleanup only)
+## 📝 Recent Major Updates
+- **October 2025**: Knitting expertise added to all AI system prompts alongside crochet
+- **October 2025**: Web app reached feature parity with iOS (authentication, conversations, multimodal AI, model selection)
+- **October 2025**: OpenRouter integration for unlimited free AI requests (Qwen, DeepSeek models)
+- **October 2025**: RapidAPI YouTube service for transcript extraction (bypasses IP blocking)
+- **October 2025**: PDF support with inline rendering and caching
+- **October 2025**: AI model configuration syncs with backend for proper routing
 
 ---
-*Last Updated: October 13, 2025*
+*Last Updated: October 17, 2025*
