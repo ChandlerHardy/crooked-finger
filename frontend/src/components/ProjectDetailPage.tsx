@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Edit, Star, Upload, Image as ImageIcon, MessageCircle, Tag, MoreVertical, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit, Star, Upload, Image as ImageIcon, MessageCircle, Tag, MoreVertical, Download, Trash2, FileText } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -8,6 +8,7 @@ import { Input } from './ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ChatInterface } from './ChatInterface';
+import { PDFIframe } from './PDFIframe';
 
 // Enhanced Image Viewer Component with Zoom & Pan
 interface EnhancedImageViewerProps {
@@ -26,6 +27,34 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const containerRef = React.useRef<HTMLDivElement>(null);
   const imageRef = React.useRef<HTMLImageElement>(null);
+
+  // Check if URL is a PDF
+  const isPDF = (url: string) => {
+    return url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf');
+  };
+
+  // Check if URL is an image (not a PDF)
+  const isImage = (url: string) => {
+    return /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url) || 
+           url.startsWith('data:image');
+  };
+
+  const getPreferredImage = (url: string) => {
+    // If it's already an image, return as-is
+    if (isImage(url)) {
+      return url;
+    }
+    // If it's a PDF, return as PDF
+    if (isPDF(url)) {
+      return url;
+    }
+    // Default to the original URL if we can't determine
+    return url;
+  };
+
+  const currentImage = images[currentIndex];
+  const preferredImageUrl = currentImage ? getPreferredImage(currentImage.url) : '';
+  const isPDFImage = isPDF(preferredImageUrl);
 
   // Reset zoom and position when image changes
   React.useEffect(() => {
@@ -198,28 +227,39 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
           {Math.round(scale * 100)}%
         </div>
 
-        {/* Image */}
-        <img
-          ref={imageRef}
-          src={images[currentIndex]?.url}
-          alt={images[currentIndex]?.caption}
-          className="select-none"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-            ...getFittedSize(),
-            transition: isDragging ? 'none' : 'transform 0.1s ease-out'
-          }}
-          draggable={false}
-          onLoad={handleImageLoad}
-          onDoubleClick={() => {
-            if (scale === 1) {
-              setScale(2);
-            } else {
-              setScale(1);
-              setPosition({ x: 0, y: 0 });
-            }
-          }}
-        />
+        {/* Image or PDF */}
+        {isPDFImage ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <PDFIframe
+              src={preferredImageUrl}
+              title={currentImage.caption}
+              className="w-[90%] h-[90%] bg-white"
+              showPDFLabel={false}
+            />
+          </div>
+        ) : (
+          <img
+            ref={imageRef}
+            src={preferredImageUrl}
+            alt={currentImage?.caption}
+            className="select-none"
+            style={{
+              transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+              ...getFittedSize(),
+              transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+            }}
+            draggable={false}
+            onLoad={handleImageLoad}
+            onDoubleClick={() => {
+              if (scale === 1) {
+                setScale(2);
+              } else {
+                setScale(1);
+                setPosition({ x: 0, y: 0 });
+              }
+            }}
+          />
+        )}
 
         {/* Image Info */}
         <div className="absolute bottom-4 left-4 right-4 text-white text-center bg-black bg-opacity-50 rounded-lg p-3">
@@ -246,6 +286,8 @@ interface Project {
   name: string;
   description: string;
   pattern: string;
+  instructions?: string;
+  images?: string[];
   status: 'planning' | 'in-progress' | 'completed';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   tags: string[];
@@ -266,20 +308,59 @@ interface ProjectDetailPageProps {
   project: Project;
   onBack: () => void;
   onUpdateProject: (project: Project) => void;
+  onUpdateProjectImages?: (projectId: string, images: string[]) => Promise<void>;
 }
 
-export function ProjectDetailPage({ project, onBack, onUpdateProject }: ProjectDetailPageProps) {
+export function ProjectDetailPage({ project, onBack, onUpdateProject, onUpdateProjectImages }: ProjectDetailPageProps) {
+  // Check if URL is a PDF
+  const isPDF = (url: string) => {
+    return url.toLowerCase().includes('.pdf') || url.startsWith('data:application/pdf');
+  };
+
+  // Check if URL is an image (not a PDF)
+  const isImage = (url: string) => {
+    return /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(url) || 
+           url.startsWith('data:image');
+  };
+
+  const getPreferredImage = (url: string) => {
+    // If it's already an image, return as-is
+    if (isImage(url)) {
+      return url;
+    }
+    // If it's a PDF, return as PDF
+    if (isPDF(url)) {
+      return url;
+    }
+    // Default to the original URL if we can't determine
+    return url;
+  };
+
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingPattern, setIsEditingPattern] = useState(false);
   const [editedProject, setEditedProject] = useState(project);
   const [chatLoading, setChatLoading] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
-  // Load images from localStorage on component mount
+  // Load images from project prop (backend) or localStorage as fallback
   const [images, setImages] = useState<ProjectImage[]>(() => {
+    // First try to use images from the project prop (from backend)
+    if (project.images && project.images.length > 0) {
+      console.log('📸 Loading images from project prop:', project.images.length, 'images');
+      return project.images.map((imageUrl, index) => ({
+        id: `${project.id}-${index}`,
+        url: imageUrl,
+        caption: `Image ${index + 1}`,
+        uploadedAt: new Date(),
+        type: 'progress' as const
+      }));
+    }
+
+    // Fallback to localStorage
     try {
       const savedImages = localStorage.getItem(`project-images-${project.id}`);
       if (savedImages) {
+        console.log('📸 Loading images from localStorage for project:', project.id);
         const parsed = JSON.parse(savedImages) as Array<Omit<ProjectImage, 'uploadedAt'> & { uploadedAt: string }>;
         // Convert date strings back to Date objects
         return parsed.map((img) => ({
@@ -291,23 +372,9 @@ export function ProjectDetailPage({ project, onBack, onUpdateProject }: ProjectD
       console.error('Error loading saved images:', error);
     }
 
-    // Default mock data for demonstration
-    return [
-      {
-        id: '1',
-        url: 'https://picsum.photos/400/300?random=1',
-        caption: 'Starting the first round',
-        uploadedAt: new Date(),
-        type: 'progress'
-      },
-      {
-        id: '2',
-        url: 'https://picsum.photos/400/300?random=2',
-        caption: 'Pattern chart',
-        uploadedAt: new Date(),
-        type: 'chart'
-      }
-    ];
+    // No images available
+    console.log('📸 No images found for project:', project.id);
+    return [];
   });
 
   // Chat message type for project chat
@@ -324,14 +391,26 @@ export function ProjectDetailPage({ project, onBack, onUpdateProject }: ProjectD
   // Project-specific chat history starts empty
   const [projectChatHistory, setProjectChatHistory] = useState<ChatMessage[]>([]);
 
-  // Save images to localStorage whenever images change
+  // Save images to backend whenever images change (debounced to avoid too many updates)
   React.useEffect(() => {
-    try {
-      localStorage.setItem(`project-images-${project.id}`, JSON.stringify(images));
-    } catch (error) {
-      console.error('Error saving images to localStorage:', error);
+    // Only save if we have an update function and images have actually changed from the project prop
+    if (onUpdateProjectImages && images.length > 0) {
+      const imageUrls = images.map(img => img.url);
+      const projectImageUrls = project.images || [];
+
+      // Check if images have changed
+      const imagesChanged =
+        imageUrls.length !== projectImageUrls.length ||
+        imageUrls.some((url, index) => url !== projectImageUrls[index]);
+
+      if (imagesChanged) {
+        console.log('📸 Images changed, saving to backend...');
+        onUpdateProjectImages(project.id, imageUrls).catch(error => {
+          console.error('Error saving images to backend:', error);
+        });
+      }
     }
-  }, [images, project.id]);
+  }, [images, project.id, project.images, onUpdateProjectImages]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -360,6 +439,9 @@ export function ProjectDetailPage({ project, onBack, onUpdateProject }: ProjectD
     setLightboxIndex(index);
     setLightboxOpen(true);
   };
+
+  // Check if URL is an image (not a PDF)
+
 
   const handleDeleteImage = (imageId: string) => {
     setImages(prev => prev.filter(img => img.id !== imageId));
@@ -541,8 +623,9 @@ ${project.pattern || 'No pattern yet'}`;
       {/* Content */}
       <div className="flex-1 p-6 overflow-hidden">
         <Tabs defaultValue="pattern" className="h-full flex flex-col">
-          <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
+          <TabsList className="grid w-full grid-cols-5 flex-shrink-0">
             <TabsTrigger value="pattern">Pattern</TabsTrigger>
+            <TabsTrigger value="instructions">Instructions</TabsTrigger>
             <TabsTrigger value="images">Images</TabsTrigger>
             <TabsTrigger value="chat">Project Chat</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
@@ -596,6 +679,19 @@ ${project.pattern || 'No pattern yet'}`;
             </Card>
           </TabsContent>
 
+          <TabsContent value="instructions" className="flex-1 mt-6 overflow-auto">
+            <Card className="h-full flex flex-col">
+              <CardHeader className="flex-shrink-0">
+                <CardTitle>Translated Instructions</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-auto">
+                <div className="whitespace-pre-wrap text-sm leading-relaxed bg-muted p-4 rounded-md h-full overflow-auto">
+                  {project.instructions || 'No translated instructions available.'}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="images" className="flex-1 mt-6 overflow-auto relative">
             <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -625,19 +721,27 @@ ${project.pattern || 'No pattern yet'}`;
                     className="aspect-video bg-muted overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => openLightbox(index)}
                   >
-                    <img
-                      src={image.url}
-                      alt={image.caption}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        // Fallback to icon if image fails to load
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement!.classList.add('flex', 'items-center', 'justify-center');
-                        const icon = document.createElement('div');
-                        icon.innerHTML = '<svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
-                        e.currentTarget.parentElement!.appendChild(icon);
-                      }}
-                    />
+                    {isPDF(image.url) ? (
+                      <PDFIframe
+                        src={image.url}
+                        title={image.caption}
+                        className="pointer-events-none"
+                      />
+                    ) : (
+                      <img
+                        src={getPreferredImage(image.url)}
+                        alt={image.caption}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback to icon if image fails to load
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.classList.add('flex', 'items-center', 'justify-center');
+                          const icon = document.createElement('div');
+                          icon.innerHTML = '<svg class="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
+                          e.currentTarget.parentElement!.appendChild(icon);
+                        }}
+                      />
+                    )}
                   </div>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">

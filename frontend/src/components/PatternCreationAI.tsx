@@ -7,6 +7,7 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Card } from './ui/card';
 import { ScrollArea } from './ui/scroll-area';
+import { isPdf } from '../lib/pdfToImage';
 
 interface ChatMessage {
   id: string;
@@ -36,15 +37,15 @@ export function PatternCreationAI({ onPatternExtracted }: PatternCreationAIProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && attachedImages.length < 5) {
       const remainingSlots = 5 - attachedImages.length;
       const filesToProcess = Array.from(files).slice(0, remainingSlots);
 
-      filesToProcess.forEach((file) => {
-        // Accept both images and PDFs
-        if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+      for (const file of filesToProcess) {
+        // Handle images directly, but convert PDFs to images first
+        if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = (event) => {
             if (event.target?.result) {
@@ -52,8 +53,30 @@ export function PatternCreationAI({ onPatternExtracted }: PatternCreationAIProps
             }
           };
           reader.readAsDataURL(file);
+        } else if (file.type === 'application/pdf') {
+          // Convert PDF to JPEG before storing
+          try {
+            const { convertPdfToImage } = await import('../lib/pdfToImage');
+            const pdfDataUrl = URL.createObjectURL(file);
+            const imageDataUrl = await convertPdfToImage(pdfDataUrl);
+            
+            // Clean up object URL
+            URL.revokeObjectURL(pdfDataUrl);
+            
+            setAttachedImages(prev => [...prev, imageDataUrl]);
+          } catch (error) {
+            console.error('Error converting PDF to image:', error);
+            // Fallback to trying to save the PDF as-is if conversion fails
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target?.result) {
+                setAttachedImages(prev => [...prev, event.target!.result as string]);
+              }
+            };
+            reader.readAsDataURL(file);
+          }
         }
-      });
+      }
     }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -66,29 +89,35 @@ export function PatternCreationAI({ onPatternExtracted }: PatternCreationAIProps
 
   // Helper function to detect if base64 string is a PDF
   const isPDF = (base64String: string): boolean => {
-    console.log('🔍 Checking if PDF:', base64String.substring(0, 50));
-
-    if (base64String.startsWith('data:application/pdf')) {
-      console.log('✅ Detected PDF via data URL prefix');
-      return true;
-    }
-    if (base64String.startsWith('JVBERi0')) {
-      console.log('✅ Detected PDF via magic bytes');
-      return true;
-    }
-    if (base64String.startsWith('/9j/')) {
-      console.log('❌ Detected JPEG, not PDF');
-      return false; // Definitely a JPEG
-    }
-
     try {
-      const decoded = atob(base64String.substring(0, 8));
-      const result = decoded.startsWith('%PDF');
-      console.log(result ? '✅ Detected PDF via base64 decode' : '❌ Not a PDF');
-      return result;
-    } catch (e) {
-      console.log('❌ Failed to decode base64, not a PDF');
-      return false;
+      // Use the utility function
+      return isPdf(base64String);
+    } catch {
+      // Fallback implementation in case the utility is not available
+      console.log('🔍 Checking if PDF:', base64String.substring(0, 50));
+
+      if (base64String.startsWith('data:application/pdf')) {
+        console.log('✅ Detected PDF via data URL prefix');
+        return true;
+      }
+      if (base64String.startsWith('JVBERi0')) {
+        console.log('✅ Detected PDF via magic bytes');
+        return true;
+      }
+      if (base64String.startsWith('/9j/')) {
+        console.log('❌ Detected JPEG, not PDF');
+        return false; // Definitely a JPEG
+      }
+
+      try {
+        const decoded = atob(base64String.substring(0, 8));
+        const result = decoded.startsWith('%PDF');
+        console.log(result ? '✅ Detected PDF via base64 decode' : '❌ Not a PDF');
+        return result;
+      } catch (e) {
+        console.log('❌ Failed to decode base64, not a PDF');
+        return false;
+      }
     }
   };
 

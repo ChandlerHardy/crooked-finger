@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { PDFIframe } from './PDFIframe';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,7 @@ interface PatternLibraryProps {
   onSavePattern?: (pattern: Pattern) => void;
   onDeletePattern?: (patternId: string) => void;
   onUpdatePattern?: (pattern: Pattern) => void;
+  onCreateProject?: (pattern: Pattern) => void;
 }
 
 interface ViewerImage {
@@ -105,16 +107,13 @@ function MediaDisplay({ src, alt, className, onClick }: MediaDisplayProps) {
   if (isPDF(src)) {
     return (
       <div className={`relative ${className}`} onClick={onClick}>
-        <object
-          data={dataUrl}
-          type="application/pdf"
+        <PDFIframe
+          src={dataUrl}
+          title={alt}
           className="w-full h-full"
-        >
-          <div className="flex flex-col items-center justify-center h-full bg-muted p-4">
-            <FileText className="h-12 w-12 text-muted-foreground mb-2" />
-            <p className="text-xs text-muted-foreground">PDF Document</p>
-          </div>
-        </object>
+          showPDFLabel={false}
+          fallbackToImage={true} // Try to convert PDF to image for better performance
+        />
       </div>
     );
   }
@@ -287,23 +286,13 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
         {/* Image or PDF */}
         {isPDF(images[currentIndex]?.url) ? (
           <div className="max-w-[90vw] max-h-[90vh] w-full h-full flex items-center justify-center">
-            <object
-              data={ensureDataUrl(images[currentIndex]?.url)}
-              type="application/pdf"
-              className="w-full h-full max-w-[800px] max-h-[90vh]"
-            >
-              <div className="flex flex-col items-center justify-center h-full bg-muted p-8 rounded">
-                <FileText className="h-16 w-16 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">PDF Document</p>
-                <a
-                  href={ensureDataUrl(images[currentIndex]?.url)}
-                  download="pattern.pdf"
-                  className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90"
-                >
-                  Download PDF
-                </a>
-              </div>
-            </object>
+            <PDFIframe
+              src={ensureDataUrl(images[currentIndex]?.url)}
+              title={`PDF preview - page ${currentIndex + 1}`}
+              className="max-w-[800px] max-h-[90vh]"
+              showPDFLabel={false}
+              fallbackToImage={true} // Try to convert PDF to image for better performance
+            />
           </div>
         ) : (
           <img
@@ -325,7 +314,7 @@ function EnhancedImageViewer({ images, currentIndex, onClose, onNavigate }: Enha
 
 
 
-export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePattern, onUpdatePattern }: PatternLibraryProps) {
+export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePattern, onUpdatePattern, onCreateProject }: PatternLibraryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
@@ -345,6 +334,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
     materials: '',
     estimatedTime: '',
     thumbnailUrl: '',
+    images: '',
   });
   const [activeTab, setActiveTab] = useState('manual'); // Track which tab is active
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -376,16 +366,40 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
     }
   };
 
-  const handleThumbnailUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setNewPattern({ ...newPattern, thumbnailUrl: event.target.result as string });
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            setNewPattern({ ...newPattern, thumbnailUrl: event.target.result as string });
+          }
+        };
+        reader.readAsDataURL(file);
+      } else if (file.type === 'application/pdf') {
+        // Convert PDF to JPEG for thumbnail
+        try {
+          const { convertPdfToImage } = await import('../lib/pdfToImage');
+          const pdfDataUrl = URL.createObjectURL(file);
+          const imageDataUrl = await convertPdfToImage(pdfDataUrl);
+          
+          // Clean up object URL
+          URL.revokeObjectURL(pdfDataUrl);
+          
+          setNewPattern({ ...newPattern, thumbnailUrl: imageDataUrl });
+        } catch (error) {
+          console.error('Error converting PDF thumbnail to image:', error);
+          // Fallback to trying to save the PDF as-is if conversion fails
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (event.target?.result) {
+              setNewPattern({ ...newPattern, thumbnailUrl: event.target.result as string });
+            }
+          };
+          reader.readAsDataURL(file);
         }
-      };
-      reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -429,6 +443,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
       materials: '',
       estimatedTime: '',
       thumbnailUrl: '',
+      images: '',
     });
     setShowNewPatternDialog(false);
   };
@@ -443,10 +458,11 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
     setPatternToDelete(null);
   };
 
-  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && selectedPattern) {
-      Array.from(files).forEach((file) => {
+      for (const file of Array.from(files)) {
+        // Handle images directly, but convert PDFs to images first
         if (file.type.startsWith('image/')) {
           const reader = new FileReader();
           reader.onload = (event) => {
@@ -462,8 +478,48 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
             }
           };
           reader.readAsDataURL(file);
+        } else if (file.type === 'application/pdf') {
+          // Convert PDF to JPEG before storing
+          try {
+            const { convertPdfToImage } = await import('../lib/pdfToImage');
+            const arrayBuffer = await file.arrayBuffer();
+            // Create a data URL for the PDF first to pass to convertPdfToImage
+            const pdfDataUrl = URL.createObjectURL(file);
+            const imageDataUrl = await convertPdfToImage(pdfDataUrl);
+            
+            // Clean up object URL
+            URL.revokeObjectURL(pdfDataUrl);
+            
+            if (selectedPattern) {
+              const updatedPattern = {
+                ...selectedPattern,
+                images: [...(selectedPattern.images || []), imageDataUrl],
+              };
+              setSelectedPattern(updatedPattern);
+              if (onUpdatePattern) {
+                onUpdatePattern(updatedPattern);
+              }
+            }
+          } catch (error) {
+            console.error('Error converting PDF to image:', error);
+            // Fallback to trying to save the PDF as-is if conversion fails
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              if (event.target?.result && selectedPattern) {
+                const updatedPattern = {
+                  ...selectedPattern,
+                  images: [...(selectedPattern.images || []), event.target.result as string],
+                };
+                setSelectedPattern(updatedPattern);
+                if (onUpdatePattern) {
+                  onUpdatePattern(updatedPattern);
+                }
+              }
+            };
+            reader.readAsDataURL(file);
+          }
         }
-      });
+      }
     }
     if (galleryFileInputRef.current) {
       galleryFileInputRef.current.value = '';
@@ -533,7 +589,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                     <input
                       ref={galleryFileInputRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/*,application/pdf"
                       multiple
                       onChange={handleGalleryUpload}
                       className="hidden"
@@ -693,7 +749,14 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Pattern
               </Button>
-              <Button className="flex-1">
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  if (onCreateProject && selectedPattern) {
+                    onCreateProject(selectedPattern);
+                  }
+                }}
+              >
                 Start Project
               </Button>
             </div>
@@ -1019,7 +1082,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 onChange={handleThumbnailUpload}
                 className="hidden"
               />
@@ -1069,17 +1132,25 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                 onPatternExtracted={(data) => {
                   console.log('🎯 Pattern data extracted from AI:', data);
                   // Auto-populate form fields from AI extraction
-                  setNewPattern(prev => ({
-                    ...prev,
-                    // Use extracted data, but don't override if extraction returned undefined
-                    name: data.name || prev.name,
-                    notation: data.notation || prev.notation,
-                    instructions: data.instructions || prev.instructions,
-                    difficulty: (data.difficulty as 'beginner' | 'intermediate' | 'advanced') || prev.difficulty,
-                    materials: data.materials || prev.materials,
-                    estimatedTime: data.estimatedTime || prev.estimatedTime,
-                    thumbnailUrl: data.images?.[0] || prev.thumbnailUrl,
-                  }));
+                  setNewPattern(prev => {
+                    // Merge new images with existing images
+                    const existingImages = prev.images ? (typeof prev.images === 'string' ? JSON.parse(prev.images) : prev.images) : [];
+                    const newImages = data.images || [];
+                    const allImages = [...existingImages, ...newImages];
+
+                    return {
+                      ...prev,
+                      // Use extracted data, but don't override if extraction returned undefined
+                      name: data.name || prev.name,
+                      notation: data.notation || prev.notation,
+                      instructions: data.instructions || prev.instructions,
+                      difficulty: (data.difficulty as 'beginner' | 'intermediate' | 'advanced') || prev.difficulty,
+                      materials: data.materials || prev.materials,
+                      estimatedTime: data.estimatedTime || prev.estimatedTime,
+                      thumbnailUrl: data.images?.[0] || prev.thumbnailUrl,
+                      images: allImages.length > 0 ? JSON.stringify(allImages) : prev.images,
+                    };
+                  });
                 }}
               />
             </TabsContent>

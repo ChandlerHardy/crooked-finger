@@ -21,6 +21,8 @@ interface Project {
   name: string;
   description: string;
   pattern: string;
+  instructions?: string;
+  images?: string[];
   status: 'planning' | 'in-progress' | 'completed';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   tags: string[];
@@ -102,20 +104,18 @@ export default function Home() {
   // Fetch patterns/projects from backend
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [projectsData, setProjectsData] = useState<any>(null);
-  const [projectsLoading, setProjectsLoading] = useState(false);
   
   const fetchProjects = async () => {
-    setProjectsLoading(true);
     try {
       console.log('🔄 Fetching projects from backend...');
+      console.log('🔐 Current auth token:', localStorage.getItem('crooked-finger-token') ? 'present' : 'missing');
+      console.log('👤 Current user:', localStorage.getItem('crooked-finger-user'));
       const response = await fetchWithAuth(GET_PROJECTS);
       console.log('📋 Backend response:', response);
       setProjectsData(response.data);
       console.log('📊 Projects data set:', response.data);
     } catch (error) {
       console.error('❌ Error fetching projects:', error);
-    } finally {
-      setProjectsLoading(false);
     }
   };
   
@@ -127,14 +127,29 @@ export default function Home() {
   
   // Convert backend projects to SavedPattern format
   useEffect(() => {
+    console.log('🔄 Processing patterns data for display:', projectsData);
     if (projectsData?.projects) {
-      // Filter for patterns (projects without notes)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const patterns = projectsData.projects
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((project: any) => !project.notes || project.notes.trim() === '')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((project: any) => {
+      console.log('📊 Total projects from backend (for patterns):', projectsData.projects.length);
+      // Log all projects to see what came from backend
+      console.log('📋 All projects from backend:', projectsData.projects.map((p: { id: number; name: string; notes?: string; createdAt: string }) => ({ 
+        id: p.id, 
+        name: p.name, 
+        hasNotes: !!p.notes,
+        notes: p.notes?.substring(0, 50) + '...',
+        createdAt: p.createdAt
+      })));
+      
+      const allPatterns = projectsData.projects
+        .filter((project: { notes?: string }) => !project.notes || project.notes.trim() === '');
+        
+      console.log('🔍 Raw patterns from backend (no notes):', allPatterns.map((p: { id: number; name: string; createdAt: string }) => ({ 
+        id: p.id, 
+        name: p.name,
+        createdAt: p.createdAt
+      })));
+      
+      const patterns = allPatterns
+        .map((project: { id: number; name: string; imageData?: string; difficultyLevel: string; patternText?: string; translatedText?: string; yarnWeight?: string; estimatedTime?: string; createdAt: string }) => {
           const images = project.imageData ? JSON.parse(project.imageData) : [];
           console.log('🖼️ Pattern images loaded:', {
             projectId: project.id,
@@ -161,31 +176,50 @@ export default function Home() {
             createdAt: new Date(project.createdAt),
           };
         });
+      console.log('📊 Filtered patterns (no notes):', patterns.length);
       setSavedPatterns(patterns);
+    } else {
+      console.log('📊 No pattern data received, setting empty array');
+      setSavedPatterns([]);
+      setProjects([]);
     }
   }, [projectsData]);
   
   // For projects (with notes)
   useEffect(() => {
+    console.log('🔄 Processing projects data for display:', projectsData);
     if (projectsData?.projects) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.log('📊 Total projects from backend:', projectsData.projects.length);
       const userProjects = projectsData.projects
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .filter((project: any) => project.notes && project.notes.trim() !== '')
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((project: any) => ({
-          id: project.id.toString(),
-          name: project.name,
-          description: project.notes || '',
-          pattern: project.patternText || '',
-          status: project.isCompleted ? 'completed' as const : 'in-progress' as const,
-          difficulty: project.difficultyLevel as 'beginner' | 'intermediate' | 'advanced',
-          tags: [],
-          createdAt: new Date(project.createdAt),
-          updatedAt: new Date(project.updatedAt),
-          isFavorite: false,
-        }));
+        .filter((project: { notes?: string }) => project.notes && project.notes.trim() !== '')
+        .map((project: { id: number; name: string; notes?: string; patternText?: string; translatedText?: string; imageData?: string; isCompleted: boolean; difficultyLevel: string; createdAt: string; updatedAt: string }) => {
+          const images = project.imageData ? JSON.parse(project.imageData) : [];
+          console.log('🖼️ Project images loaded:', {
+            projectId: project.id,
+            projectName: project.name,
+            imageCount: images.length,
+          });
+          return {
+            id: project.id.toString(),
+            name: project.name,
+            description: project.notes || '',
+            pattern: project.patternText || '',
+            instructions: project.translatedText || '',
+            images,
+            status: project.isCompleted ? 'completed' as const : 'in-progress' as const,
+            difficulty: project.difficultyLevel as 'beginner' | 'intermediate' | 'advanced',
+            tags: [],
+            createdAt: new Date(project.createdAt),
+            updatedAt: new Date(project.updatedAt),
+            isFavorite: false,
+          };
+        });
+      console.log('📊 Filtered user projects (with notes):', userProjects.length);
       setProjects(userProjects);
+    } else {
+      console.log('📊 No projects data received, setting empty array');
+      setProjects([]);
+      setSavedPatterns([]);
     }
   }, [projectsData]);
   // const [chatWithAssistant, { loading: chatLoading }] = useMutation<
@@ -799,6 +833,26 @@ export default function Home() {
     }
   };
 
+  const handleUpdateProjectImages = async (projectId: string, images: string[]) => {
+    try {
+      console.log('💾 Updating project images in backend:', {
+        projectId,
+        imageCount: images.length
+      });
+      await updateProjectMutation({
+        projectId: parseInt(projectId),
+        input: {
+          imageData: images.length > 0 ? JSON.stringify(images) : null,
+        }
+      });
+      // Refresh projects to get updated data
+      await fetchProjects();
+    } catch (error) {
+      console.error('Error updating project images:', error);
+      throw error; // Re-throw so the component can handle it
+    }
+  };
+
   const handleSavePattern = async (patternData: Partial<SavedPattern> & { patternName?: string; patternNotation?: string; patternInstructions?: string; difficultyLevel?: string }) => {
     try {
       // Check if it's a Pattern object (from manual creation) or pattern data (from YouTube)
@@ -860,9 +914,16 @@ export default function Home() {
         return;
       }
 
+      // Log before deletion
+      console.log('📊 Before deletion - current saved patterns:', savedPatterns.length);
+      console.log('📊 Pattern to be deleted:', savedPatterns.find(p => p.id === patternId));
+      
       await deleteProjectMutation({ projectId: numericId });
-      console.log('✅ Pattern deleted successfully');
+      console.log('✅ Pattern deletion mutation completed');
+      
+      // Refresh data after deletion
       await fetchProjects();
+      console.log('🔄 Fetch projects called after deletion');
     } catch (error) {
       console.error('❌ Error deleting pattern:', error);
       alert('Failed to delete pattern. Please try again.');
@@ -890,9 +951,60 @@ export default function Home() {
     }
   };
 
+  const handleCreateProjectFromPattern = async (pattern: SavedPattern) => {
+    try {
+      console.log('🎨 Creating project from pattern:', pattern.name);
+      // Create a new project from pattern - add notes field to mark it as a project
+      await createProjectMutation({
+        input: {
+          name: `${pattern.name} Project`,
+          patternText: pattern.notation,
+          translatedText: pattern.instructions,
+          difficultyLevel: pattern.difficulty,
+          estimatedTime: pattern.estimatedTime,
+          yarnWeight: pattern.materials,
+          imageData: pattern.images && pattern.images.length > 0 ? JSON.stringify(pattern.images) : null,
+          notes: 'Working on this pattern', // This marks it as a project (not a pattern)
+        }
+      });
+      await fetchProjects();
+      setCurrentPage('projects');
+    } catch (error) {
+      console.error('Error creating project from pattern:', error);
+      alert('Failed to create project. Please try again.');
+    }
+  };
+
   const handleBackToProjects = () => {
     setSelectedProject(null);
     setCurrentPage('projects');
+  };
+
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      console.log('🗑️ Deleting project with ID:', projectId);
+      const numericId = parseInt(projectId);
+      console.log('🗑️ Parsed numeric ID:', numericId);
+
+      if (isNaN(numericId)) {
+        console.error('❌ Invalid project ID - cannot convert to number:', projectId);
+        alert('Cannot delete this project. Invalid ID.');
+        return;
+      }
+
+      await deleteProjectMutation({ projectId: numericId });
+      console.log('✅ Project deleted successfully');
+      await fetchProjects();
+
+      // If we're viewing the deleted project, go back to projects list
+      if (selectedProject?.id === projectId) {
+        setSelectedProject(null);
+        setCurrentPage('projects');
+      }
+    } catch (error) {
+      console.error('❌ Error deleting project:', error);
+      alert('Failed to delete project. Please try again.');
+    }
   };
 
   const handleAuthSuccess = (token: string, userData: { id: string; username: string; email: string }) => {
@@ -987,6 +1099,7 @@ export default function Home() {
             projects={projects}
             onCreateProject={handleCreateProject}
             onProjectClick={handleProjectClick}
+            onDeleteProject={handleDeleteProject}
           />
         );
       case 'project-detail':
@@ -995,12 +1108,14 @@ export default function Home() {
             project={selectedProject}
             onBack={handleBackToProjects}
             onUpdateProject={handleUpdateProject}
+            onUpdateProjectImages={handleUpdateProjectImages}
           />
         ) : (
           <ProjectsPage
             projects={projects}
             onCreateProject={handleCreateProject}
             onProjectClick={handleProjectClick}
+            onDeleteProject={handleDeleteProject}
           />
         );
       case 'patterns':
@@ -1010,6 +1125,7 @@ export default function Home() {
             onSavePattern={handleSavePattern}
             onDeletePattern={handleDeletePattern}
             onUpdatePattern={handleUpdatePattern}
+            onCreateProject={handleCreateProjectFromPattern}
           />
         );
       case 'youtube-test':
