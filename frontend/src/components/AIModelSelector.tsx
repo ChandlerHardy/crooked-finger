@@ -11,7 +11,6 @@ import { apolloClient } from '@/lib/apollo-client';
 import { SET_AI_MODEL } from '@/lib/graphql/mutations';
 
 interface AIModelConfig {
-  useOpenrouterDefault: boolean;
   useSmartRouting: boolean;
   primaryModel: string;
   fallbackOrder: string[];
@@ -42,10 +41,9 @@ const MODEL_ID_TO_BACKEND_NAME: Record<string, string> = {
 
 export function AIModelSelector({ onConfigChange }: AIModelSelectorProps) {
   const [config, setConfig] = useState<AIModelConfig>({
-    useOpenrouterDefault: true,
     useSmartRouting: false,
-    primaryModel: 'openrouter-qwen',
-    fallbackOrder: ['openrouter-qwen', 'openrouter-deepseek', 'gemini-pro', 'gemini-flash-preview', 'gemini-flash', 'gemini-flash-lite'],
+    primaryModel: 'gemini-flash',
+    fallbackOrder: ['gemini-flash', 'gemini-flash-preview', 'openrouter-deepseek', 'gemini-pro', 'gemini-flash-lite', 'openrouter-qwen'],
   });
 
   // Load saved config from localStorage and sync with backend
@@ -177,22 +175,6 @@ export function AIModelSelector({ onConfigChange }: AIModelSelectorProps) {
           />
         </div>
 
-        {/* OpenRouter Default Toggle */}
-        <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-          <div className="space-y-0.5">
-            <Label htmlFor="openrouter-default" className="text-base">
-              Use OpenRouter (Free & Unlimited)
-            </Label>
-            <p className="text-sm text-muted-foreground">
-              Primary model with no daily quotas
-            </p>
-          </div>
-          <Switch
-            id="openrouter-default"
-            checked={config.useOpenrouterDefault}
-            onCheckedChange={(checked) => updateConfig({ useOpenrouterDefault: checked })}
-          />
-        </div>
       </div>
 
       {/* Primary Model Selection */}
