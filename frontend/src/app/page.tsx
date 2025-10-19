@@ -8,11 +8,10 @@ import { ChatInterface } from '../components/ChatInterface';
 import { ProjectsPage } from '../components/ProjectsPage';
 import { ProjectDetailPage } from '../components/ProjectDetailPage';
 import { PatternLibrary } from '../components/PatternLibrary';
-import AIUsageDashboardComponent from '../components/AIUsageDashboard';
 import { YouTubeTest } from '../components/YouTubeTest';
 import { AuthModal } from '../components/AuthModal';
-import { AIModelSelector } from '../components/AIModelSelector';
 import { ConversationList } from '../components/ConversationList';
+import { SettingsPage } from '../components/SettingsPage';
 import { GET_PROJECTS } from '../lib/graphql/queries';
 import { CREATE_PROJECT, UPDATE_PROJECT, DELETE_PROJECT } from '../lib/graphql/mutations';
 
@@ -1130,24 +1129,8 @@ export default function Home() {
         );
       case 'youtube-test':
         return <YouTubeTest onNavigate={setCurrentPage} onSavePattern={handleSavePattern} />;
-      case 'usage':
-        return (
-          <div className="h-full overflow-auto p-6">
-            <AIUsageDashboardComponent />
-          </div>
-        );
       case 'settings':
-        return (
-          <div className="h-full overflow-auto p-6">
-            <div className="max-w-3xl mx-auto space-y-6">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Settings</h1>
-                <p className="text-muted-foreground">Customize your Crooked Finger experience</p>
-              </div>
-              <AIModelSelector />
-            </div>
-          </div>
-        );
+        return <SettingsPage user={user} onLogout={handleLogout} />;
       default:
         return (
           <HomePage

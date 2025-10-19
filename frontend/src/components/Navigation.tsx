@@ -1,4 +1,4 @@
-import { Home, MessageCircle, FolderOpen, BookOpen, Settings, Activity, Youtube, LogIn, LogOut, User } from 'lucide-react';
+import { Home, MessageCircle, FolderOpen, BookOpen, Settings, Youtube, LogIn } from 'lucide-react';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ThemeToggle';
 import Image from 'next/image';
@@ -18,7 +18,6 @@ export function Navigation({ currentPage, onPageChange, user, onLoginClick, onLo
     { id: 'projects', label: 'My Projects', icon: FolderOpen },
     { id: 'patterns', label: 'Pattern Library', icon: BookOpen },
     { id: 'youtube-test', label: 'YouTube Test', icon: Youtube },
-    { id: 'usage', label: 'AI Usage', icon: Activity },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -58,30 +57,8 @@ export function Navigation({ currentPage, onPageChange, user, onLoginClick, onLo
         </div>
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border space-y-3">
-        {/* User section */}
-        {user ? (
-          <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl p-4 border border-primary/10">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                <User className="h-4 w-4 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">{user.username}</p>
-                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onLogoutClick}
-              className="w-full gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-        ) : (
+      {!user && (
+        <div className="p-4 border-t border-sidebar-border">
           <Button
             variant="default"
             size="sm"
@@ -91,23 +68,8 @@ export function Navigation({ currentPage, onPageChange, user, onLoginClick, onLo
             <LogIn className="h-4 w-4" />
             Sign In
           </Button>
-        )}
-
-        {/* AI info section */}
-        <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl p-4 border border-primary/10">
-          <div className="flex items-start gap-3">
-            <div className="w-6 h-6 bg-primary/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-              <span className="text-primary text-xs">✨</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-sidebar-foreground mb-1">AI-Powered</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Transform complex crochet notation into easy-to-follow instructions
-              </p>
-            </div>
-          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
