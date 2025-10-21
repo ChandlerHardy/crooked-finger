@@ -406,10 +406,19 @@ class Mutation:
         info: Info,
         message: str,
         conversation_id: Optional[int] = None,
+        project_id: Optional[int] = None,
         context: Optional[str] = None,
         image_data: Optional[str] = None
     ) -> ChatResponse:
-        """Enhanced chat with AI assistant that can generate pattern diagrams and analyze images"""
+        """Enhanced chat with AI assistant that can generate pattern diagrams and analyze images
+
+        Args:
+            message: User's message/question
+            conversation_id: Optional conversation ID to continue a conversation
+            project_id: Optional project ID to link message to a specific project
+            context: Optional context string (e.g., project details for project-specific chat)
+            image_data: Optional JSON array of base64-encoded images
+        """
         user = info.context.get("user")
 
         db = next(get_db())
@@ -446,8 +455,8 @@ class Mutation:
             if False:  # Temporarily disabled
                 pass
 
-            # Store the conversation in database
-            store_chat_message(db, message, ai_response, user.id if user else None, None, conversation_id)
+            # Store the conversation in database with project_id if provided
+            store_chat_message(db, message, ai_response, user.id if user else None, project_id, conversation_id)
 
             return ChatResponse(
                 message=ai_response,
