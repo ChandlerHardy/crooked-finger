@@ -83,17 +83,17 @@ Crooked Finger transforms the crafting experience by combining AI intelligence w
 
 ## Key Features
 
-✅ **Pattern Translation**: Convert "sc2tog, ch 3, dc in next 5 sts" into readable instructions
-✅ **Multimodal AI**: Upload pattern PDFs or images for analysis
-✅ **YouTube Integration**: Extract patterns from video tutorials
-✅ **Diagram Generation**: Create visual charts from text patterns
-✅ **Project Tracking**: Manage active projects with notes and images
-✅ **Pattern Library**: Centralized storage with search and filtering
-✅ **Image Viewer**: Professional zoom/pan for project photos
-✅ **AI Model Selection**: Choose between free and premium AI models
-✅ **Usage Dashboard**: Track AI quota consumption in real-time
-✅ **User Authentication**: JWT-based login with Argon2 password hashing
-✅ **Cross-Platform**: Web app with iOS companion (in development)
+- ✅ **Pattern Translation**: Convert "sc2tog, ch 3, dc in next 5 sts" into readable instructions
+- ✅ **Multimodal AI**: Upload pattern PDFs or images for analysis
+- ✅ **YouTube Integration**: Extract patterns from video tutorials
+- ✅ **Diagram Generation**: Create visual charts from text patterns
+- ✅ **Project Tracking**: Manage active projects with notes and images
+- ✅ **Pattern Library**: Centralized storage with search and filtering
+- ✅ **Image Viewer**: Professional zoom/pan for project photos
+- ✅ **AI Model Selection**: Choose between free and premium AI models
+- ✅ **Usage Dashboard**: Track AI quota consumption in real-time
+- ✅ **User Authentication**: JWT-based login with Argon2 password hashing
+- ✅ **Cross-Platform**: Web app with iOS companion (in development)
 
 ---
 
@@ -249,9 +249,9 @@ MIT License - See LICENSE file for details
 ## Contact
 
 **Chandler Hardy**
-📧 Email: chandler@chandlerhardy.com
+📧 Email: hardych04@gmail.com
 🌐 Portfolio: [chandlerhardy.com](https://chandlerhardy.com)
-💼 LinkedIn: [linkedin.com/in/chandler-hardy](https://linkedin.com/in/chandler-hardy)
+💼 LinkedIn: [linkedin.com/in/chandler-hardy-80808112b](https://linkedin.com/in/chandler-hardy-80808112b)
 
 ---
 
