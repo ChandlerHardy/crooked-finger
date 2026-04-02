@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Send, Sparkles, FileText, MessageCircle, Image as ImageIcon, X, Paperclip, Plus } from 'lucide-react';
@@ -282,7 +283,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                           <h4 className="text-sm font-medium text-gray-700 mb-3">Pattern Diagram</h4>
                           <div
                             className="diagram-container flex justify-center items-center"
-                            dangerouslySetInnerHTML={{ __html: msg.diagramSvg }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.diagramSvg, { USE_PROFILES: { svg: true, svgFilters: true } }) }}
                           />
                         </div>
                       )}
