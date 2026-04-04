@@ -21,6 +21,9 @@ svglib==1.5.1
 svgwrite==1.4.3
 reportlab==4.0.7
 
+# HTTP Client
+requests==2.31.0
+
 # Crochet Pattern Processing
 regex==2023.10.3
 beautifulsoup4==4.12.2
