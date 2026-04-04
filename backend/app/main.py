@@ -80,7 +80,7 @@ async def check_admin_or_debug_access(request: Request):
     try:
         current_user = get_current_user_from_token(token, db)
         return is_user_admin(current_user)
-    except:
+    except Exception:
         return False
     finally:
         db.close()
