@@ -24,6 +24,23 @@ from app.services.youtube_service_rapidapi import youtube_service_rapidapi
 import re
 from sqlalchemy.orm import Session
 
+# Input length limits (in bytes)
+MAX_CHAT_MESSAGE_LENGTH = 50_000       # 50KB for chat messages
+MAX_PATTERN_TEXT_LENGTH = 100_000      # 100KB for pattern text fields
+MAX_SHORT_STRING_LENGTH = 1_000        # 1KB for names, titles, short fields
+MAX_IMAGE_DATA_LENGTH = 10_000_000     # 10MB for base64-encoded image data
+MAX_TRANSCRIPT_LENGTH = 500_000        # 500KB for YouTube transcripts
+MAX_URL_LENGTH = 2_048                 # 2KB for URLs
+
+
+def _validate_length(value: Optional[str], max_length: int, field_name: str) -> None:
+    """Raise if a string input exceeds its max allowed length."""
+    if value is not None and len(value) > max_length:
+        raise Exception(
+            f"{field_name} exceeds maximum length of {max_length:,} characters"
+        )
+
+
 @strawberry.type
 class Mutation:
     @strawberry.field
@@ -116,6 +133,15 @@ class Mutation:
         input: CreateProjectInput
     ) -> CrochetProject:
         """Create a new crochet project"""
+        _validate_length(input.name, MAX_SHORT_STRING_LENGTH, "name")
+        _validate_length(input.pattern_text, MAX_PATTERN_TEXT_LENGTH, "pattern_text")
+        _validate_length(input.translated_text, MAX_PATTERN_TEXT_LENGTH, "translated_text")
+        _validate_length(input.notes, MAX_PATTERN_TEXT_LENGTH, "notes")
+        _validate_length(input.image_data, MAX_IMAGE_DATA_LENGTH, "image_data")
+        _validate_length(input.difficulty_level, MAX_SHORT_STRING_LENGTH, "difficulty_level")
+        _validate_length(input.yarn_weight, MAX_SHORT_STRING_LENGTH, "yarn_weight")
+        _validate_length(input.hook_size, MAX_SHORT_STRING_LENGTH, "hook_size")
+
         user = info.context.get("user")
         if not user:
             raise Exception("Authentication required")
@@ -168,6 +194,12 @@ class Mutation:
         input: UpdateProjectInput
     ) -> CrochetProject:
         """Update an existing crochet project"""
+        _validate_length(input.name, MAX_SHORT_STRING_LENGTH, "name")
+        _validate_length(input.pattern_text, MAX_PATTERN_TEXT_LENGTH, "pattern_text")
+        _validate_length(input.translated_text, MAX_PATTERN_TEXT_LENGTH, "translated_text")
+        _validate_length(input.notes, MAX_PATTERN_TEXT_LENGTH, "notes")
+        _validate_length(input.image_data, MAX_IMAGE_DATA_LENGTH, "image_data")
+
         user = info.context.get("user")
         if not user:
             raise Exception("Authentication required")
@@ -261,6 +293,8 @@ class Mutation:
         input: CreateConversationInput
     ) -> Conversation:
         """Create a new conversation"""
+        _validate_length(input.title, MAX_SHORT_STRING_LENGTH, "title")
+
         user = info.context.get("user")
         if not user:
             raise Exception("Authentication required")
@@ -302,6 +336,8 @@ class Mutation:
         input: UpdateConversationInput
     ) -> Conversation:
         """Update an existing conversation"""
+        _validate_length(input.title, MAX_SHORT_STRING_LENGTH, "title")
+
         user = info.context.get("user")
         if not user:
             raise Exception("Authentication required")
@@ -374,6 +410,8 @@ class Mutation:
         context: Optional[str] = None
     ) -> str:
         """Chat with AI assistant about crochet and knitting patterns and techniques"""
+        _validate_length(message, MAX_CHAT_MESSAGE_LENGTH, "message")
+        _validate_length(context, MAX_CHAT_MESSAGE_LENGTH, "context")
         db = next(get_db())
         try:
             # Get recent chat history for context (generous limit with 1M token context window)
@@ -419,6 +457,10 @@ class Mutation:
             context: Optional context string (e.g., project details for project-specific chat)
             image_data: Optional JSON array of base64-encoded images
         """
+        _validate_length(message, MAX_CHAT_MESSAGE_LENGTH, "message")
+        _validate_length(context, MAX_CHAT_MESSAGE_LENGTH, "context")
+        _validate_length(image_data, MAX_IMAGE_DATA_LENGTH, "image_data")
+
         user = info.context.get("user")
 
         db = next(get_db())
@@ -530,6 +572,7 @@ class Mutation:
         languages: Optional[list[str]] = None
     ) -> YouTubeTranscriptResponse:
         """Fetch transcript from a YouTube video"""
+        _validate_length(video_url, MAX_URL_LENGTH, "video_url")
         try:
             result = youtube_service_rapidapi.get_transcript(video_url, languages)
             return YouTubeTranscriptResponse(
@@ -556,6 +599,9 @@ class Mutation:
         thumbnail_url: Optional[str] = None
     ) -> ExtractedPattern:
         """Extract crochet or knitting pattern from YouTube video transcript using AI"""
+        _validate_length(transcript, MAX_TRANSCRIPT_LENGTH, "transcript")
+        _validate_length(video_id, MAX_SHORT_STRING_LENGTH, "video_id")
+        _validate_length(thumbnail_url, MAX_URL_LENGTH, "thumbnail_url")
         try:
             # Use AI to extract pattern information from transcript
             # Gemini 2.5 Flash has 1M token context, so we can use most of the transcript
