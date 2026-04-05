@@ -27,8 +27,6 @@ export const fetchWithAuth = async (query: string | DocumentNode, variables?: Re
   }
   
   const token = localStorage.getItem('crooked-finger-token');
-  console.log('🔐 Auth token present:', !!token);
-  
   // Convert DocumentNode to string if needed
   const queryString = typeof query === 'string' ? query : (query as DocumentNode).loc?.source.body || '';
   
@@ -42,6 +40,5 @@ export const fetchWithAuth = async (query: string | DocumentNode, variables?: Re
   });
   
   const result = await response.json();
-  console.log('📥 GraphQL response:', result);
   return result;
 };
