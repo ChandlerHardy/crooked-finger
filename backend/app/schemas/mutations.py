@@ -49,6 +49,9 @@ class Mutation:
         input: RegisterInput
     ) -> AuthResponse:
         """Register a new user"""
+        _validate_length(input.email, MAX_SHORT_STRING_LENGTH, "email")
+        _validate_length(input.password, MAX_SHORT_STRING_LENGTH, "password")
+
         db = next(get_db())
         try:
             # Check if user already exists
@@ -96,6 +99,9 @@ class Mutation:
         input: LoginInput
     ) -> AuthResponse:
         """Login user"""
+        _validate_length(input.email, MAX_SHORT_STRING_LENGTH, "email")
+        _validate_length(input.password, MAX_SHORT_STRING_LENGTH, "password")
+
         db = next(get_db())
         try:
             user = authenticate_user(db, input.email, input.password)
@@ -199,6 +205,9 @@ class Mutation:
         _validate_length(input.translated_text, MAX_PATTERN_TEXT_LENGTH, "translated_text")
         _validate_length(input.notes, MAX_PATTERN_TEXT_LENGTH, "notes")
         _validate_length(input.image_data, MAX_IMAGE_DATA_LENGTH, "image_data")
+        _validate_length(input.difficulty_level, MAX_SHORT_STRING_LENGTH, "difficulty_level")
+        _validate_length(input.yarn_weight, MAX_SHORT_STRING_LENGTH, "yarn_weight")
+        _validate_length(input.hook_size, MAX_SHORT_STRING_LENGTH, "hook_size")
 
         user = info.context.get("user")
         if not user:
@@ -545,6 +554,11 @@ class Mutation:
             model_name: Specific model to use (e.g., "deepseek/deepseek-chat-v3.1:free"), or None for smart routing
             priority_order: Custom fallback order for models (for smart routing mode)
         """
+        _validate_length(model_name, MAX_SHORT_STRING_LENGTH, "model_name")
+        if priority_order:
+            for i, model in enumerate(priority_order):
+                _validate_length(model, MAX_SHORT_STRING_LENGTH, f"priority_order[{i}]")
+
         result = ai_service.set_ai_model(model_name=model_name, priority_order=priority_order)
 
         if not result["success"]:
