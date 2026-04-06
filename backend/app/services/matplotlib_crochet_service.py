@@ -11,6 +11,9 @@ import io
 import base64
 from typing import Dict, List, Tuple
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 class MatplotlibCrochetService:
     def __init__(self):
@@ -40,7 +43,7 @@ class MatplotlibCrochetService:
         """
         Generate a professional granny square chart based on the actual pattern provided
         """
-        print(f"DEBUG: matplotlib_crochet_service.generate_granny_square_chart called with pattern: {pattern_text[:100]}...")
+        logger.debug("generate_granny_square_chart called with pattern: %s...", pattern_text[:100])
 
         # Create figure with regular (not polar) subplot for better control
         fig, ax = plt.subplots(figsize=self.fig_size, dpi=self.dpi)
@@ -52,11 +55,11 @@ class MatplotlibCrochetService:
 
         # Analyze the pattern to determine structure
         if self._is_traditional_granny_pattern(pattern_text):
-            print("DEBUG: Drawing traditional granny square")
+            logger.debug("Drawing traditional granny square")
             # Traditional granny square with ch-4 ring and corner ch-2 spaces
             self._draw_traditional_granny_square(ax, pattern_text)
         else:
-            print("DEBUG: Drawing circular pattern fallback")
+            logger.debug("Drawing circular pattern fallback")
             # Default to the circular pattern we had before
             self._draw_round_1_cartesian(ax)
             self._draw_round_2_cartesian(ax)

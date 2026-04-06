@@ -11,6 +11,9 @@ from app.database.connection import SessionLocal
 import httpx
 import json
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
 
 class GeminiModel(Enum):
     """Available Gemini models with their daily limits and characteristics"""
@@ -94,7 +97,7 @@ class AIService:
                     self.use_openrouter_default = False
         except Exception as e:
             # Table may not exist yet (before migration runs)
-            print(f"Could not load AI config from database (table may not exist yet): {e}")
+            logger.warning("Could not load AI config from database (table may not exist yet): %s", e)
             pass
         finally:
             db.close()
@@ -125,7 +128,7 @@ class AIService:
                 # Use direct API key parameter (proven to work)
                 self.client = genai.Client(api_key=self.gemini_api_key)
             except Exception as e:
-                print(f"Failed to create Gemini client with direct API key: {e}")
+                logger.error("Failed to create Gemini client with direct API key: %s", e)
                 return None
         return self.client
 
@@ -375,7 +378,7 @@ class AIService:
             return "image/webp"
         else:
             # Default to JPEG if unknown (most common for photos)
-            print(f"Warning: Unknown file type, defaulting to image/jpeg. First bytes: {data[:10].hex()}")
+            logger.warning("Unknown file type, defaulting to image/jpeg. First bytes: %s", data[:10].hex())
             return "image/jpeg"
 
     async def _translate_with_gemini(self, pattern_text: str, context: str, complexity: str = "complex") -> str:
@@ -526,7 +529,7 @@ Always be encouraging and provide practical, actionable advice."""
                         ))
                     contents = parts
                 except (json.JSONDecodeError, base64.binascii.Error) as e:
-                    print(f"Warning: Failed to parse image data: {e}")
+                    logger.warning("Failed to parse image data: %s", e)
                     contents = combined_prompt
             else:
                 contents = combined_prompt
@@ -610,7 +613,7 @@ Provide detailed, beginner-friendly instructions."""
 
             except Exception as e:
                 last_error = e
-                print(f"OpenRouter model {model_name} failed: {e}, trying next model...")
+                logger.warning("OpenRouter model %s failed: %s, trying next model...", model_name, e)
                 continue
 
         # All models failed
@@ -620,7 +623,7 @@ Provide detailed, beginner-friendly instructions."""
         """Use OpenRouter models for crochet/knitting chat with fallback (image support not yet implemented)"""
         # TODO: Add image support for OpenRouter models that support it
         if image_data:
-            print("Warning: Image data provided but OpenRouter image support not yet implemented")
+            logger.warning("Image data provided but OpenRouter image support not yet implemented")
         # Use RAG to analyze user request and enhance context
         user_analysis = rag_service.analyze_user_request(message)
 
@@ -691,7 +694,7 @@ Always be encouraging and provide practical, actionable advice."""
 
             except Exception as e:
                 last_error = e
-                print(f"OpenRouter model {model_name} failed: {e}, trying next model...")
+                logger.warning("OpenRouter model %s failed: %s, trying next model...", model_name, e)
                 continue
 
         # All models failed
@@ -814,7 +817,7 @@ Provide a clear, step-by-step translation."""
         """Chat using a specific OpenRouter model (image support not yet implemented)"""
         # TODO: Add image support for OpenRouter models that support it
         if image_data:
-            print("Warning: Image data provided but OpenRouter image support not yet implemented")
+            logger.warning("Image data provided but OpenRouter image support not yet implemented")
         user_analysis = rag_service.analyze_user_request(message)
 
         system_prompt = """You are a friendly, expert crochet and knitting instructor and pattern designer. Help users with:
@@ -962,7 +965,7 @@ Always be encouraging and provide practical, actionable advice."""
                         ))
                     contents = parts
                 except (json.JSONDecodeError, base64.binascii.Error) as e:
-                    print(f"Warning: Failed to parse image data: {e}")
+                    logger.warning("Failed to parse image data: %s", e)
                     contents = user_prompt
             else:
                 contents = user_prompt
