@@ -135,7 +135,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
       )}
 
       <ScrollArea className="flex-1 p-6 overflow-auto" ref={scrollAreaRef}>
-        <div className="space-y-4 max-w-4xl mx-auto min-h-full">
+        <div className="space-y-4 max-w-4xl mx-auto min-h-full" role="log" aria-live="polite" aria-label="Chat messages">
           {conversationLoading ? (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -198,7 +198,8 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                   <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${
                     msg.type === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                   }`}>
-                    {msg.type === 'user' ? '👤' : '🤖'}
+                    <span aria-hidden="true">{msg.type === 'user' ? '👤' : '🤖'}</span>
+                    <span className="sr-only">{msg.type === 'user' ? 'User' : 'Assistant'}</span>
                   </div>
                   <div className="flex-1 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2 mb-3">
@@ -296,7 +297,8 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
             <Card className="mr-12 bg-card/90 p-5 shadow-lg border-border/30 rounded-2xl backdrop-blur-sm">
               <div className="flex items-start gap-4">
                 <div className="w-9 h-9 rounded-2xl flex items-center justify-center bg-muted text-muted-foreground">
-                  🤖
+                  <span aria-hidden="true">🤖</span>
+                  <span className="sr-only">Assistant</span>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-3">
@@ -325,6 +327,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
             accept="image/*"
             multiple
             onChange={handleFileSelect}
+            aria-label="Upload image files"
             className="hidden"
           />
           
@@ -342,6 +345,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                     type="button"
                     onClick={() => removeImage(index)}
                     className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    aria-label={`Remove attached image ${index + 1}`}
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -359,6 +363,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
               disabled={loading}
               className="rounded-2xl border-primary/30 hover:border-primary/50 hover:bg-primary/10 flex-shrink-0"
               title="Attach images"
+              aria-label="Attach images"
             >
               <Paperclip className="h-4 w-4" />
             </Button>
@@ -369,6 +374,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                 onChange={(e) => setMessage(e.target.value)}
                 onPaste={handlePaste}
                 placeholder="Type a message, paste or attach images..."
+                aria-label="Chat message input"
                 className="rounded-2xl border-primary/30 focus:border-primary/50 bg-input-background/80 text-foreground placeholder:text-muted-foreground min-h-[44px] max-h-32 resize-none pr-10 !field-sizing-auto"
                 style={{ 
                   wordBreak: 'break-word', 
@@ -392,7 +398,7 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                 </div>
               )}
             </div>
-            <Button type="submit" disabled={(!message.trim() && pastedImages.length === 0) || loading} className="rounded-2xl px-6 flex-shrink-0">
+            <Button type="submit" disabled={(!message.trim() && pastedImages.length === 0) || loading} className="rounded-2xl px-6 flex-shrink-0" aria-label="Send message">
               <Send className="h-4 w-4" />
             </Button>
           </div>
