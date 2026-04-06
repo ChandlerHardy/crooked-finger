@@ -497,12 +497,21 @@ class Mutation:
             # Check if the message or response contains pattern information
             has_pattern = contains_pattern_info(message + " " + ai_response)
 
+            # Generate SVG diagram when a diagram was requested and pattern data is available
+            diagram_svg = None
+            if user_analysis.get('requests_diagram'):
+                pattern_text = extract_pattern_text(message, ai_response)
+                if pattern_text:
+                    pattern_data = pattern_service.parse_pattern_structure(pattern_text)
+                    if pattern_data.get('rounds') and len(pattern_data['rounds']) > 0:
+                        diagram_svg = pattern_service.generate_stitch_diagram_svg(pattern_data)
+
             # Store the conversation in database with project_id if provided
             store_chat_message(db, message, ai_response, user.id if user else None, project_id, conversation_id)
 
             return ChatResponse(
                 message=ai_response,
-                diagram_svg=None,
+                diagram_svg=diagram_svg,
                 diagram_png=None,
                 has_pattern=has_pattern
             )

@@ -484,7 +484,7 @@ CRITICAL FORMATTING RULES:
 
 Format your responses with clear paragraph breaks for readability.
 
-NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
+When users ask for visual diagrams or charts, provide a detailed written description of the pattern. The system will automatically generate a visual SVG diagram alongside your response when pattern data is detected.
 
 Always be encouraging and provide practical, actionable advice."""
 
@@ -636,7 +636,7 @@ Provide detailed, beginner-friendly instructions."""
 - Stitch counting and pattern adjustments
 - Converting between crochet and knitting patterns when possible
 
-NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
+When users ask for visual diagrams or charts, provide a detailed written description of the pattern. The system will automatically generate a visual SVG diagram alongside your response when pattern data is detected.
 
 Always be encouraging and provide practical, actionable advice."""
 
@@ -829,7 +829,7 @@ Provide a clear, step-by-step translation."""
 - Stitch counting and pattern adjustments
 - Converting between crochet and knitting patterns when possible
 
-NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
+When users ask for visual diagrams or charts, provide a detailed written description of the pattern. The system will automatically generate a visual SVG diagram alongside your response when pattern data is detected.
 
 Always be encouraging and provide practical, actionable advice."""
 
@@ -923,7 +923,7 @@ Be thorough, accurate, and encouraging. Focus on making the pattern easy to foll
 
 Format your responses with clear paragraph breaks for readability.
 
-NOTE: Diagram generation is temporarily disabled. When users ask for visual diagrams or charts, politely explain that you can provide detailed written descriptions of patterns instead, including step-by-step instructions and stitch placement explanations.
+When users ask for visual diagrams or charts, provide a detailed written description of the pattern. The system will automatically generate a visual SVG diagram alongside your response when pattern data is detected.
 
 Always be encouraging and provide practical, actionable advice."""
 
