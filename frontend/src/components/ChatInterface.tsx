@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import DOMPurify from 'dompurify';
 import { Send, Sparkles, FileText, MessageCircle, Image as ImageIcon, X, Paperclip, Plus } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -232,16 +233,17 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                             ol: (props) => <ol className="mb-2 ml-4 list-decimal text-card-foreground" {...props} />,
                             li: (props) => <li className="mb-1 text-card-foreground break-words" {...props} />,
                             code: (props) => {
-                              const { className, children, ...rest } = props;
+                              const { className, children } = props;
                               const text = String(children).replace(/\n$/, '');
                               const isSvgLang = typeof className === 'string' && /language-svg/i.test(className);
                               const isSvgContent = text.trimStart().startsWith('<svg') && text.includes('</svg>');
 
                               if (isSvgLang || isSvgContent) {
+                                const sanitized = DOMPurify.sanitize(text, { USE_PROFILES: { svg: true }, ADD_TAGS: ['use'] });
                                 return (
                                   <span
                                     className="diagram-container inline-flex justify-center items-center w-full"
-                                    dangerouslySetInnerHTML={{ __html: text }}
+                                    dangerouslySetInnerHTML={{ __html: sanitized }}
                                   />
                                 );
                               }
@@ -249,19 +251,21 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                               return <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono text-card-foreground break-all max-w-full inline-block" {...props} />;
                             },
                             pre: (props) => {
-                              const child = React.Children.only(props.children) as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
-                              if (child?.props) {
+                              const children = React.Children.toArray(props.children);
+                              const child = children.length === 1 ? children[0] as React.ReactElement<{ className?: string; children?: React.ReactNode }> : null;
+                              if (child && typeof child === 'object' && 'props' in child) {
                                 const text = String(child.props.children ?? '').replace(/\n$/, '');
                                 const isSvgLang = typeof child.props.className === 'string' && /language-svg/i.test(child.props.className);
                                 const isSvgContent = text.trimStart().startsWith('<svg') && text.includes('</svg>');
 
                                 if (isSvgLang || isSvgContent) {
+                                  const sanitized = DOMPurify.sanitize(text, { USE_PROFILES: { svg: true }, ADD_TAGS: ['use'] });
                                   return (
                                     <div className="mt-4 p-4 bg-white rounded-lg border border-border/30 shadow-sm">
                                       <h4 className="text-sm font-medium text-gray-700 mb-3">Pattern Diagram</h4>
                                       <div
                                         className="diagram-container flex justify-center items-center"
-                                        dangerouslySetInnerHTML={{ __html: text }}
+                                        dangerouslySetInnerHTML={{ __html: sanitized }}
                                       />
                                     </div>
                                   );
