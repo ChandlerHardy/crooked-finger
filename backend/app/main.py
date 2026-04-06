@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from strawberry.fastapi import GraphQLRouter
@@ -8,6 +9,8 @@ from app.database.connection import create_tables, get_db
 from app.database.models import User
 from app.utils.auth import get_current_user_from_token, is_user_admin
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Crooked Finger Crochet Assistant API",
@@ -50,7 +53,7 @@ async def get_context(request: Request):
                 # Add user to context for GraphQL resolvers
                 context["user"] = user
         except Exception as e:
-            print(f"Auth error: {e}")  # Debug logging
+            logger.warning("Auth context setup failed: %s", e)
             pass  # Invalid token, continue without user
         finally:
             db.close()
@@ -80,7 +83,8 @@ async def check_admin_or_debug_access(request: Request):
     try:
         current_user = get_current_user_from_token(token, db)
         return is_user_admin(current_user)
-    except Exception:
+    except Exception as e:
+        logger.warning("Admin access check failed: %s", e)
         return False
     finally:
         db.close()
