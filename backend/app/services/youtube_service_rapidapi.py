@@ -1,5 +1,5 @@
 """YouTube transcript fetching service using RapidAPI"""
-import requests
+import httpx
 import re
 import os
 import logging
@@ -101,7 +101,7 @@ class YouTubeServiceRapidAPI:
             logger.info(f"🎬 Fetching transcript via RapidAPI for video: {video_id}")
 
             # Make request to RapidAPI
-            response = requests.get(
+            response = httpx.get(
                 YouTubeServiceRapidAPI.RAPIDAPI_ENDPOINT,
                 headers=headers,
                 params=params,
@@ -186,7 +186,7 @@ class YouTubeServiceRapidAPI:
                 "thumbnail_url_hq": thumbnail_url_hq
             }
 
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             logger.error(f"❌ Network error: {str(e)}")
             return {
                 "success": False,
