@@ -1,0 +1,92 @@
+{
+  "project": "crooked-finger",
+  "findings": [
+    {
+      "title": "Replace print() with structured logging in backend",
+      "category": "quick-win",
+      "effort": "30min",
+      "impact": "medium",
+      "files": [
+        "backend/app/services/ai_service.py",
+        "backend/app/services/matplotlib_crochet_service.py",
+        "backend/app/main.py"
+      ],
+      "what": "ai_service.py has 8+ print() statements (lines 97, 378, 529, 613, 623, 694, 817, 965) and references logger.error at line 128 without importing logging. matplotlib_crochet_service.py has DEBUG print()s at lines 43, 55, 59. main.py uses print() at lines 22-25, 53. Add `import logging; logger = logging.getLogger(__name__)` and replace all print() calls with appropriate logger.info/warning/error calls.",
+      "why": "The uncommitted diff already fixes one print→logger in ai_service.py:128, but logger is never imported — this will crash at runtime. The remaining 11+ print() calls bypass structured logging, making production debugging and log aggregation impossible."
+    },
+    {
+      "title": "Silent exception swallowing in main.py auth context",
+      "category": "quick-win",
+      "effort": "15min",
+      "impact": "medium",
+      "files": [
+        "backend/app/main.py"
+      ],
+      "what": "Lines 54 and 83 in main.py catch exceptions with bare `pass`, silently discarding authentication errors during GraphQL context setup. Add logger.warning() calls before pass so auth failures are visible in logs.",
+      "why": "Auth failures are completely invisible in production. If JWT validation breaks or the database is unreachable during context setup, there's zero indication in logs — makes debugging security/auth issues extremely difficult."
+    },
+    {
+      "title": "Duplicate requests dependency in requirements.txt",
+      "category": "quick-win",
+      "effort": "5min",
+      "impact": "low",
+      "files": [
+        "backend/requirements.txt"
+      ],
+      "what": "Line 16 has `requests>=2.31.0` and line 26 has `requests==2.31.0`. Remove the unpinned `>=` entry, keeping only the pinned `==` version.",
+      "why": "Contradictory version specs can cause pip resolution issues or install unexpected versions depending on resolution order."
+    },
+    {
+      "title": "Re-enable chart/diagram rendering in chat",
+      "category": "tech-debt",
+      "effort": "2hr",
+      "impact": "high",
+      "files": [
+        "frontend/src/components/ChatInterface.tsx"
+      ],
+      "what": "SVG chart rendering is disabled at lines 238-245 and 264-271 in ChatInterface.tsx due to duplicate rendering issues. The backend generates matplotlib charts successfully, but the frontend doesn't display them. Fix the SVG detection logic and re-enable diagram display in chat responses.",
+      "why": "Professional diagram generation is a core differentiator listed in the product docs and CLAUDE.md. It's fully implemented on the backend but invisible to users because the frontend rendering is turned off. This is a shipped feature that's been regressed."
+    },
+    {
+      "title": "Step-by-step guided pattern mode",
+      "category": "feature",
+      "effort": "6hr",
+      "impact": "high",
+      "files": [
+        "frontend/src/components/GuidedPatternView.tsx (new)",
+        "frontend/src/components/PatternLibrary.tsx",
+        "backend/app/schemas/mutations.py",
+        "backend/app/services/ai_service.py"
+      ],
+      "what": "Add a 'Follow Along' mode to patterns: the AI breaks a pattern into numbered steps, and the user taps through one instruction at a time with a visual showing the current stitch. Use the existing difficulty field (beginner/intermediate/advanced) to control explanation verbosity. Add a new GraphQL mutation `parsePatternSteps` that takes raw pattern text and returns structured steps with stitch type, count, and optional diagram hint. Frontend shows a step counter, current instruction, and next/prev navigation.",
+      "why": "The product context explicitly lists this as a goal ('step-by-step guided mode — one instruction at a time with visuals'). The difficulty system already exists in PatternLibrary but only as a label. Target users are beginners who get lost in wall-of-text patterns — guided mode is the highest-value feature gap for the core use case."
+    },
+    {
+      "title": "Yarn/material calculator from pattern",
+      "category": "feature",
+      "effort": "4hr",
+      "impact": "medium",
+      "files": [
+        "frontend/src/components/YarnCalculator.tsx (new)",
+        "frontend/src/components/PatternLibrary.tsx",
+        "backend/app/schemas/mutations.py",
+        "backend/app/services/ai_service.py"
+      ],
+      "what": "Add a 'Materials Estimate' feature: given a pattern (or pattern text pasted into chat), use the AI to estimate yarn yardage, hook/needle size, and approximate cost. The PatternLibrary already has materials fields (yarn weight, hook size, estimated time) but they're manually entered. Auto-populate these by having the AI parse the pattern instructions. Add a new mutation `estimatePatternMaterials` and a calculator UI panel accessible from both patterns and chat.",
+      "why": "Product context lists 'yarn/material calculator based on pattern' as a target feature. Beginners consistently struggle with buying the right amount of yarn — this directly solves a pain point. It also deepens the existing materials metadata that's already in the pattern schema but currently requires manual entry."
+    },
+    {
+      "title": "Error toast notifications for user-facing failures",
+      "category": "tech-debt",
+      "effort": "1hr",
+      "impact": "medium",
+      "files": [
+        "frontend/src/components/ChatInterface.tsx",
+        "frontend/src/app/page.tsx",
+        "frontend/src/app/layout.tsx"
+      ],
+      "what": "The `sonner` toast library is already installed as a dependency but not used. Add a <Toaster /> in layout.tsx and replace silent console.error calls with toast.error() in ChatInterface.tsx (no error feedback on failed sends) and page.tsx (lines 96-97, 116-117 log errors but show nothing to user). Also add retry button for failed chat messages.",
+      "why": "Users currently get zero feedback when messages fail, network errors occur, or AI service is unavailable. The chat just silently does nothing. For a tool used while crafting (hands busy, attention split), clear error feedback is critical — users need to know immediately if something didn't work."
+    }
+  ]
+}
