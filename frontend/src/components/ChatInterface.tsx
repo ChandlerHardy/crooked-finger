@@ -232,44 +232,9 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                             ol: (props) => <ol className="mb-2 ml-4 list-decimal text-card-foreground" {...props} />,
                             li: (props) => <li className="mb-1 text-card-foreground break-words" {...props} />,
                             code: (props) => {
-                              // Extract actual text content - ReactMarkdown passes string directly
-                              const content = typeof props.children === 'string' ? props.children : String(props.children || '');
-
-
-                              // TODO: Chart generation temporarily disabled - see CLAUDE.md for details
-                              // SVG chart rendering needs better detection logic to avoid duplicate rendering
-                              // Current issue: SVG fragments show as both code and rendered charts
-
-                              // Temporarily disabled SVG detection
-                              if (false) {
-                                return null;
-                              }
                               return <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono text-card-foreground break-all max-w-full inline-block" {...props} />;
                             },
                             pre: (props) => {
-                              // Extract text from pre block (usually contains a code element)
-                              const extractText = (children: React.ReactNode): string => {
-                                if (typeof children === 'string') return children;
-                                if (React.isValidElement(children)) {
-                                  const childProps = children.props as { children?: React.ReactNode };
-                                  if (childProps.children) {
-                                    return extractText(childProps.children);
-                                  }
-                                }
-                                return String(children || '');
-                              };
-
-                              const content = extractText(props.children);
-
-
-                              // TODO: Chart generation temporarily disabled - see CLAUDE.md for details
-                              // SVG chart rendering needs better detection logic to avoid duplicate rendering
-                              // Current issue: SVG fragments show as both code and rendered charts
-
-                              // Temporarily disabled SVG detection
-                              if (false) {
-                                return null;
-                              }
                               return <pre className="bg-muted p-2 rounded text-sm font-mono overflow-x-auto text-card-foreground break-all max-w-full" {...props} />;
                             },
                             blockquote: (props) => <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground break-words" {...props} />
