@@ -24,10 +24,10 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     create_tables()
-    print("✅ Database tables created")
-    print(f"🚀 Crooked Finger API starting on port 8001")
-    print(f"🔧 Environment: {settings.environment}")
-    print(f"🎯 GraphQL endpoint: /crooked-finger/graphql")
+    logger.info("Database tables created")
+    logger.info("Crooked Finger API starting on port 8001")
+    logger.info("Environment: %s", settings.environment)
+    logger.info("GraphQL endpoint: /crooked-finger/graphql")
 
 # CORS middleware
 cors_origins = settings.cors_origins.split(",")
