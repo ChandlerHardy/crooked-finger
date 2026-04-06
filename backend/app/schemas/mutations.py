@@ -495,24 +495,13 @@ class Mutation:
             # Check if the message or response contains pattern information
             has_pattern = contains_pattern_info(message + " " + ai_response)
 
-            diagram_svg = None
-            diagram_png = None
-
-            # TODO: Diagram generation temporarily disabled - see CLAUDE.md for details
-            # Frontend SVG rendering needs better detection logic to avoid duplicate rendering
-            # Temporarily disabled until frontend rendering is fixed
-
-            # Check if user is requesting a diagram AND we have pattern content
-            if False:  # Temporarily disabled
-                pass
-
             # Store the conversation in database with project_id if provided
             store_chat_message(db, message, ai_response, user.id if user else None, project_id, conversation_id)
 
             return ChatResponse(
                 message=ai_response,
-                diagram_svg=diagram_svg,
-                diagram_png=diagram_png,
+                diagram_svg=None,
+                diagram_png=None,
                 has_pattern=has_pattern
             )
 
