@@ -2,72 +2,79 @@
   "project": "crooked-finger",
   "findings": [
     {
-      "title": "N+1 query in conversations list endpoint",
-      "category": "quick-win",
-      "effort": "20min",
-      "impact": "medium",
-      "files": ["backend/app/schemas/queries.py"],
-      "what": "The `conversations` query (lines 158-162) counts messages per conversation inside a Python loop, issuing N+1 SQL queries. Replace with a single query using `func.count()` with a subquery or LEFT JOIN + GROUP BY to get message counts in one roundtrip.",
-      "why": "Users with many conversations will see slow load times. This is the main list endpoint loaded on every app open — latency here directly impacts perceived performance."
+      "title": "Consolidate duplicated Gemini chat methods in ai_service.py",
+      "category": "tech-debt",
+      "effort": "2hr",
+      "impact": "high",
+      "files": ["backend/app/services/ai_service.py"],
+      "what": "_chat_with_gemini (line 433, CC=50) and _chat_with_specific_gemini_model (line 888, CC=52) are ~95% identical — both build context, handle images, call the Gemini API, and track usage. The only difference is model selection (auto vs explicit) and config passing. Refactor into a single parametric method with an optional model_name parameter.",
+      "why": "These two methods account for ~1000 lines of duplicated code and are the #3 and #4 hotspots in the repo. Any bug fix or feature change (e.g., adding streaming, new model params) must be applied twice. Consolidation halves maintenance burden and reduces total backend complexity significantly."
     },
     {
-      "title": "Remove dead diagram generation code paths",
+      "title": "Extract ChatInterface sub-components to reduce CC=51",
       "category": "tech-debt",
+      "effort": "2hr",
+      "impact": "medium",
+      "files": [
+        "frontend/src/components/ChatInterface.tsx",
+        "frontend/src/components/MessageBubble.tsx",
+        "frontend/src/components/DiagramRenderer.tsx"
+      ],
+      "what": "ChatInterface.tsx (409 lines, CC=51, nesting=12) is the #1 hotspot. The SVG detection/sanitization logic is duplicated 3x across code, pre, and diagramSvg rendering paths. Extract: (1) MessageBubble component for per-message rendering (~105 lines), (2) DiagramRenderer for shared SVG detection + DOMPurify sanitization, (3) ImageUploadForm for the image preview/attach UI (~72 lines).",
+      "why": "Highest complexity component in the codebase. The duplicated SVG detection is a security-sensitive code path (DOMPurify sanitization) — having it in one place makes it easier to audit and update. Extraction would drop CC by ~12-15 points."
+    },
+    {
+      "title": "Remove dead diagram helper functions from mutations.py",
+      "category": "quick-win",
       "effort": "30min",
       "impact": "low",
-      "files": ["backend/app/schemas/mutations.py", "frontend/src/components/ChatInterface.tsx"],
-      "what": "Both backend (mutations.py line 501: `if False:`) and frontend (ChatInterface.tsx lines 238, 264: `if (false)`) have disabled diagram rendering behind dead code blocks with TODO comments. Extract these into a feature flag or remove entirely and track re-enablement as a separate issue.",
-      "why": "Dead code confuses contributors about what's actually functional. The `if False` / `if (false)` pattern bypasses linters and makes the codebase harder to reason about. Either commit to removing it or put it behind a proper feature toggle."
-    },
-    {
-      "title": "Unused `requests` package in backend dependencies",
-      "category": "quick-win",
-      "effort": "15min",
-      "impact": "low",
-      "files": ["backend/requirements.txt", "backend/app/services/ai_service.py"],
-      "what": "The `requests==2.31.0` package is listed in requirements.txt but `httpx` is used for all HTTP calls (OpenRouter API). Grep the backend for actual `import requests` usage — if none found, remove it to reduce Docker image size and dependency surface.",
-      "why": "A recent commit (7d30164) already removed a duplicate `requests` entry, suggesting awareness this may be vestigial. Keeping unused deps increases attack surface and image build time."
+      "files": ["backend/app/schemas/mutations.py"],
+      "what": "Five functions are dead or behind disabled code paths: _chat_with_diagram_generation (line 686), requests_diagram (line 718-ish area), contains_pattern_info (line 769), extract_pattern_text (line 788), _parse_pattern_response (line 874). These are remnants from before diagram rendering was re-enabled via the matplotlib service. The call sites at lines 434, 498, 503, 655 appear to be inside conditionally-disabled blocks. Remove ~275 lines of dead code.",
+      "why": "mutations.py is the #2 hotspot (CC=32 for _parse_pattern_response alone). Removing dead code reduces file size and eliminates confusion about which diagram path is actually active. Recent PR #45 re-enabled diagram rendering through the proper matplotlib service, making these helpers obsolete."
     },
     {
       "title": "Step-by-step guided pattern mode",
       "category": "feature",
-      "effort": "2-3 days",
+      "effort": "6hr",
       "impact": "high",
       "files": [
         "backend/app/services/ai_service.py",
         "backend/app/schemas/mutations.py",
+        "backend/app/schemas/types.py",
         "backend/app/database/models.py",
-        "frontend/src/components/PatternStepGuide.tsx"
+        "frontend/src/components/ChatInterface.tsx",
+        "frontend/src/components/GuidedMode.tsx"
       ],
-      "what": "Add a 'Guided Mode' that takes a pattern's `translated_text` and splits it into numbered steps the user can tap through one at a time. Each step shows: the instruction, a stitch diagram thumbnail, stitch count, and a 'mark complete' checkbox. Backend: new mutation `parsePatternSteps(projectId)` that uses the AI to split translated text into a JSON array of steps. Frontend: new component with step navigation, progress bar, and per-step completion state persisted to the project.",
-      "why": "This is the #1 product gap. The app translates patterns but then dumps a wall of text. Beginners — the target users — need to follow patterns one row at a time while their hands are busy with yarn. A guided mode transforms Crooked Finger from a translation tool into a crafting companion. No competitor does this well."
+      "what": "Add a 'guided mode' toggle in the chat interface that breaks a pattern into numbered steps and presents them one at a time with visual aids. Backend: add a new mutation (or extend chatWithAssistantEnhanced) that accepts a pattern and returns structured steps with stitch counts, diagrams per step, and difficulty annotations. Frontend: new GuidedMode component showing current step, progress bar (ui/progress.tsx already exists), 'next step' / 'I need help' buttons, and inline diagram rendering per step.",
+      "why": "The product's stated goal is 'make complex patterns accessible to beginners.' Difficulty levels exist but beginners still face a wall of text. Step-by-step is the #1 feature that would differentiate this from generic AI chatbots — it transforms a conversation tool into a guided crafting companion. The progress.tsx component is already built but unused."
     },
     {
-      "title": "AI-powered pattern difficulty scoring",
+      "title": "Yarn and materials calculator",
       "category": "feature",
-      "effort": "1 day",
-      "impact": "medium",
-      "files": [
-        "backend/app/services/ai_service.py",
-        "backend/app/schemas/mutations.py",
-        "frontend/src/components/PatternLibrary.tsx"
-      ],
-      "what": "The `CrochetProject` model already has a `difficulty_level` field but it's manually set and often empty. Add an `autoScoreDifficulty(projectId)` mutation that sends the pattern text to the AI with a structured prompt returning: difficulty (1-5), required techniques list, and a one-line rationale. Auto-trigger this on pattern creation. Frontend: show difficulty as colored badges in PatternLibrary and allow filtering/sorting by difficulty.",
-      "why": "Beginners don't know which patterns are appropriate for their skill level. Auto-scoring leverages the existing AI integration with minimal new code and makes the pattern library immediately more useful for discovery. The data model already supports it — this just fills the gap."
-    },
-    {
-      "title": "Yarn quantity calculator from pattern analysis",
-      "category": "feature",
-      "effort": "1-2 days",
+      "effort": "4hr",
       "impact": "medium",
       "files": [
         "backend/app/services/ai_service.py",
         "backend/app/schemas/mutations.py",
         "backend/app/schemas/types.py",
-        "frontend/src/components/YarnCalculator.tsx"
+        "frontend/src/components/MaterialsCalculator.tsx",
+        "frontend/src/components/ProjectDetailPage.tsx"
       ],
-      "what": "Add a `calculateYarnNeeds(projectId)` mutation that analyzes a pattern's stitch counts, dimensions, and yarn weight to estimate: total yardage needed, number of skeins (for common brands), and cost range. Return as a new `YarnEstimate` GraphQL type. The model already stores `yarn_weight` and `hook_size` — combine these with AI analysis of the pattern text to produce estimates. Frontend: show as a card on ProjectDetailPage with a 'buy yarn' helper.",
-      "why": "Buying the wrong amount of yarn is one of the most common beginner frustrations — too little means a dye-lot mismatch disaster, too much is wasted money. This feature directly serves the target user (beginners) and creates a natural integration point for affiliate links or partner yarn shops in the future."
+      "what": "Add a materials calculator that takes a pattern (or project) and returns estimated yarn quantities by weight/color, hook/needle sizes, and other materials needed. Backend: new GraphQL mutation that sends pattern text to AI with a structured output prompt for materials extraction, returning typed MaterialsEstimate. Frontend: MaterialsCalculator panel in ProjectDetailPage showing itemized materials list with quantities. The DB already stores yarn_weight and hook_size — extend to store full materials list as JSON.",
+      "why": "Crafters' #1 practical question before starting a project is 'how much yarn do I need?' This is listed in product goals and directly serves the target audience of beginners who can't estimate materials from pattern notation alone. It turns the app from a translation tool into a project planning tool."
+    },
+    {
+      "title": "Server-side pattern search and filtering",
+      "category": "feature",
+      "effort": "3hr",
+      "impact": "medium",
+      "files": [
+        "backend/app/schemas/queries.py",
+        "backend/app/schemas/types.py",
+        "frontend/src/components/PatternLibrary.tsx"
+      ],
+      "what": "Pattern library filtering (difficulty, category, tags, search) currently happens entirely client-side from the savedPatterns prop. Add server-side GraphQL queries with filter parameters: difficulty level, category, tag matching, and full-text search. Return paginated results instead of loading all patterns at once.",
+      "why": "As the pattern library grows, client-side filtering won't scale — loading all patterns with base64 images into memory is expensive. Server-side filtering also enables future community sharing (product goal) where users browse patterns from other users, which requires server-side queries by definition."
     }
   ]
 }
