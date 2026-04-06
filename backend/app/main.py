@@ -122,8 +122,8 @@ class AdminControlledGraphQLRouter(GraphQLRouter):
 # Create GraphQL router with admin controls
 graphql_app = AdminControlledGraphQLRouter(
     schema,
-    graphiql=True,
-    context_getter=get_context
+    graphql_ide="graphiql",
+    context_getter=get_context,
 )
 app.include_router(graphql_app, prefix="/crooked-finger/graphql")
 
