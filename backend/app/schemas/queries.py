@@ -1,6 +1,7 @@
 import strawberry
 from typing import List, Optional
 from strawberry.types import Info
+from sqlalchemy import func
 from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import User, CrochetProject, Conversation, ChatMessage, ProjectDiagram, AIUsageDashboard, ModelUsageStats, AIProviderConfig
@@ -148,29 +149,32 @@ class Query:
 
         db = next(get_db())
         try:
-            db_conversations = db.query(models.Conversation).filter(
+            # Single query with LEFT JOIN + GROUP BY to get message counts
+            rows = db.query(
+                models.Conversation,
+                func.count(models.ChatMessage.id).label("message_count")
+            ).outerjoin(
+                models.ChatMessage,
+                models.ChatMessage.conversation_id == models.Conversation.id
+            ).filter(
                 models.Conversation.user_id == user.id
+            ).group_by(
+                models.Conversation.id
             ).order_by(
                 models.Conversation.updated_at.desc()
             ).limit(limit).all()
 
-            result = []
-            for conv in db_conversations:
-                # Count messages in this conversation
-                message_count = db.query(models.ChatMessage).filter(
-                    models.ChatMessage.conversation_id == conv.id
-                ).count()
-
-                result.append(Conversation(
+            return [
+                Conversation(
                     id=conv.id,
                     title=conv.title,
                     user_id=conv.user_id,
                     created_at=conv.created_at,
                     updated_at=conv.updated_at,
                     message_count=message_count
-                ))
-
-            return result
+                )
+                for conv, message_count in rows
+            ]
         finally:
             db.close()
 
@@ -187,19 +191,23 @@ class Query:
 
         db = next(get_db())
         try:
-            conv = db.query(models.Conversation).filter(
+            row = db.query(
+                models.Conversation,
+                func.count(models.ChatMessage.id).label("message_count")
+            ).outerjoin(
+                models.ChatMessage,
+                models.ChatMessage.conversation_id == models.Conversation.id
+            ).filter(
                 models.Conversation.id == conversation_id,
                 models.Conversation.user_id == user.id
+            ).group_by(
+                models.Conversation.id
             ).first()
 
-            if not conv:
+            if not row:
                 return None
 
-            # Count messages in this conversation
-            message_count = db.query(models.ChatMessage).filter(
-                models.ChatMessage.conversation_id == conv.id
-            ).count()
-
+            conv, message_count = row
             return Conversation(
                 id=conv.id,
                 title=conv.title,
