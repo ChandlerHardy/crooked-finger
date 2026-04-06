@@ -8,6 +8,9 @@ from app.database.connection import create_tables, get_db
 from app.database.models import User
 from app.utils.auth import get_current_user_from_token, is_user_admin
 from app.core.config import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Crooked Finger Crochet Assistant API",
@@ -19,10 +22,10 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     create_tables()
-    print("✅ Database tables created")
-    print(f"🚀 Crooked Finger API starting on port 8001")
-    print(f"🔧 Environment: {settings.environment}")
-    print(f"🎯 GraphQL endpoint: /crooked-finger/graphql")
+    logger.info("Database tables created")
+    logger.info("Crooked Finger API starting on port 8001")
+    logger.info("Environment: %s", settings.environment)
+    logger.info("GraphQL endpoint: /crooked-finger/graphql")
 
 # CORS middleware
 cors_origins = settings.cors_origins.split(",")
@@ -50,7 +53,7 @@ async def get_context(request: Request):
                 # Add user to context for GraphQL resolvers
                 context["user"] = user
         except Exception as e:
-            print(f"Auth error: {e}")  # Debug logging
+            logger.debug("Auth error: %s", e)
             pass  # Invalid token, continue without user
         finally:
             db.close()
