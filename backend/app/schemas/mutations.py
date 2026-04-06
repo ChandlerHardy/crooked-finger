@@ -147,6 +147,7 @@ class Mutation:
         _validate_length(input.difficulty_level, MAX_SHORT_STRING_LENGTH, "difficulty_level")
         _validate_length(input.yarn_weight, MAX_SHORT_STRING_LENGTH, "yarn_weight")
         _validate_length(input.hook_size, MAX_SHORT_STRING_LENGTH, "hook_size")
+        _validate_length(input.estimated_time, MAX_SHORT_STRING_LENGTH, "estimated_time")
 
         user = info.context.get("user")
         if not user:
@@ -208,6 +209,7 @@ class Mutation:
         _validate_length(input.difficulty_level, MAX_SHORT_STRING_LENGTH, "difficulty_level")
         _validate_length(input.yarn_weight, MAX_SHORT_STRING_LENGTH, "yarn_weight")
         _validate_length(input.hook_size, MAX_SHORT_STRING_LENGTH, "hook_size")
+        _validate_length(input.estimated_time, MAX_SHORT_STRING_LENGTH, "estimated_time")
 
         user = info.context.get("user")
         if not user:
