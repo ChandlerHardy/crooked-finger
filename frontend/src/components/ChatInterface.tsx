@@ -232,9 +232,41 @@ export function ChatInterface({ chatHistory, onSendMessage, loading = false, con
                             ol: (props) => <ol className="mb-2 ml-4 list-decimal text-card-foreground" {...props} />,
                             li: (props) => <li className="mb-1 text-card-foreground break-words" {...props} />,
                             code: (props) => {
+                              const { className, children, ...rest } = props;
+                              const text = String(children).replace(/\n$/, '');
+                              const isSvgLang = typeof className === 'string' && /language-svg/i.test(className);
+                              const isSvgContent = text.trimStart().startsWith('<svg') && text.includes('</svg>');
+
+                              if (isSvgLang || isSvgContent) {
+                                return (
+                                  <span
+                                    className="diagram-container inline-flex justify-center items-center w-full"
+                                    dangerouslySetInnerHTML={{ __html: text }}
+                                  />
+                                );
+                              }
+
                               return <code className="bg-muted px-1 py-0.5 rounded text-sm font-mono text-card-foreground break-all max-w-full inline-block" {...props} />;
                             },
                             pre: (props) => {
+                              const child = React.Children.only(props.children) as React.ReactElement<{ className?: string; children?: React.ReactNode }>;
+                              if (child?.props) {
+                                const text = String(child.props.children ?? '').replace(/\n$/, '');
+                                const isSvgLang = typeof child.props.className === 'string' && /language-svg/i.test(child.props.className);
+                                const isSvgContent = text.trimStart().startsWith('<svg') && text.includes('</svg>');
+
+                                if (isSvgLang || isSvgContent) {
+                                  return (
+                                    <div className="mt-4 p-4 bg-white rounded-lg border border-border/30 shadow-sm">
+                                      <h4 className="text-sm font-medium text-gray-700 mb-3">Pattern Diagram</h4>
+                                      <div
+                                        className="diagram-container flex justify-center items-center"
+                                        dangerouslySetInnerHTML={{ __html: text }}
+                                      />
+                                    </div>
+                                  );
+                                }
+                              }
                               return <pre className="bg-muted p-2 rounded text-sm font-mono overflow-x-auto text-card-foreground break-all max-w-full" {...props} />;
                             },
                             blockquote: (props) => <blockquote className="border-l-4 border-primary pl-4 italic text-muted-foreground break-words" {...props} />
