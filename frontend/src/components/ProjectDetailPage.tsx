@@ -494,7 +494,7 @@ Pattern:
 ${project.pattern || 'No pattern yet'}`;
 
       // Use fetch() directly for GraphQL call
-      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
       const response = await fetch(graphqlUrl, {
         method: 'POST',
         headers: {

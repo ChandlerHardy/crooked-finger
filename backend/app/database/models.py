@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey, Date, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-from datetime import datetime, date
+from datetime import datetime
 
 Base = declarative_base()
 
@@ -89,26 +89,3 @@ class ProjectDiagram(Base):
     # Relationships
     project = relationship("CrochetProject", back_populates="diagrams")
 
-class AIModelUsage(Base):
-    __tablename__ = "ai_model_usage"
-
-    id = Column(Integer, primary_key=True, index=True)
-    model_name = Column(String, index=True)  # gemini-2.5-pro, gemini-2.5-flash, etc.
-    request_count = Column(Integer, default=0)
-    total_input_characters = Column(Integer, default=0)  # Total input characters processed
-    total_output_characters = Column(Integer, default=0)  # Total output characters generated
-    total_input_tokens = Column(Integer, default=0)  # Estimated input tokens (chars / 4)
-    total_output_tokens = Column(Integer, default=0)  # Estimated output tokens (chars / 4)
-    date = Column(Date, default=date.today, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-class AIModelConfig(Base):
-    __tablename__ = "ai_model_config"
-
-    id = Column(Integer, primary_key=True, index=True)
-    selected_model = Column(String, nullable=True)  # Specific model or None for smart routing
-    model_priority_order = Column(JSON, default=list)  # List of models for fallback chain
-    provider_preference = Column(String, default="auto")  # "openrouter", "gemini", or "auto"
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

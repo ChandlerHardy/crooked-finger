@@ -87,47 +87,9 @@ export function PatternCreationAI({ onPatternExtracted }: PatternCreationAIProps
     setAttachedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Helper function to detect if base64 string is a PDF
-  const isPDF = (base64String: string): boolean => {
-    try {
-      // Use the utility function
-      return isPdf(base64String);
-    } catch {
-      // Fallback implementation in case the utility is not available
-      console.log('🔍 Checking if PDF:', base64String.substring(0, 50));
-
-      if (base64String.startsWith('data:application/pdf')) {
-        console.log('✅ Detected PDF via data URL prefix');
-        return true;
-      }
-      if (base64String.startsWith('JVBERi0')) {
-        console.log('✅ Detected PDF via magic bytes');
-        return true;
-      }
-      if (base64String.startsWith('/9j/')) {
-        console.log('❌ Detected JPEG, not PDF');
-        return false; // Definitely a JPEG
-      }
-
-      try {
-        const decoded = atob(base64String.substring(0, 8));
-        const result = decoded.startsWith('%PDF');
-        console.log(result ? '✅ Detected PDF via base64 decode' : '❌ Not a PDF');
-        return result;
-      } catch (e) {
-        console.log('❌ Failed to decode base64, not a PDF');
-        return false;
-      }
-    }
-  };
-
   const extractPatternFromResponse = (response: string) => {
     console.log('📋 Full AI Response:', response);
     console.log('📋 First 200 chars:', response.substring(0, 200));
-
-    // Remove model prefix like "[gemini-2.5-pro]" from the beginning of response
-    const cleanResponse = response.replace(/^\[[\w\-\.]+\]\s*/i, '').trim();
-    console.log('🧹 Cleaned response (first 200):', cleanResponse.substring(0, 200));
 
     const extractSection = (text: string, headers: string[]): string | undefined => {
       for (const header of headers) {
@@ -166,12 +128,12 @@ export function PatternCreationAI({ onPatternExtracted }: PatternCreationAIProps
       return undefined;
     };
 
-    let extractedName = extractSection(cleanResponse, ['NAME', 'Pattern Name', 'Name', 'Title', 'TITLE', 'Pattern']);
+    let extractedName = extractSection(response, ['NAME', 'Pattern Name', 'Name', 'Title', 'TITLE', 'Pattern']);
 
     // If NAME is still not found, try to extract from the first line if it looks like a title
     if (!extractedName) {
       // Check if first line looks like a pattern name (not a field header)
-      const firstLine = cleanResponse.split('\n')[0].trim();
+      const firstLine = response.split('\n')[0].trim();
       if (firstLine &&
           !firstLine.match(/^(NAME|NOTATION|INSTRUCTIONS|DIFFICULTY|MATERIALS|TIME):/i) &&
           firstLine.length < 100) {
@@ -180,11 +142,11 @@ export function PatternCreationAI({ onPatternExtracted }: PatternCreationAIProps
       }
     }
 
-    const extractedNotation = extractSection(cleanResponse, ['NOTATION', 'Pattern Notation', 'Notation']);
-    const extractedInstructions = extractSection(cleanResponse, ['INSTRUCTIONS', 'Detailed Instructions', 'Instructions', 'Steps', 'STEPS']);
-    const extractedDifficulty = extractSection(cleanResponse, ['DIFFICULTY', 'Difficulty Level', 'Skill Level', 'Level']);
-    const extractedMaterials = extractSection(cleanResponse, ['MATERIALS', 'Supplies', 'Materials Needed', 'Yarn', 'YARN']);
-    const extractedTime = extractSection(cleanResponse, ['TIME', 'Estimated Time', 'Duration', 'Completion Time']);
+    const extractedNotation = extractSection(response, ['NOTATION', 'Pattern Notation', 'Notation']);
+    const extractedInstructions = extractSection(response, ['INSTRUCTIONS', 'Detailed Instructions', 'Instructions', 'Steps', 'STEPS']);
+    const extractedDifficulty = extractSection(response, ['DIFFICULTY', 'Difficulty Level', 'Skill Level', 'Level']);
+    const extractedMaterials = extractSection(response, ['MATERIALS', 'Supplies', 'Materials Needed', 'Yarn', 'YARN']);
+    const extractedTime = extractSection(response, ['TIME', 'Estimated Time', 'Duration', 'Completion Time']);
 
     console.log('📊 Extraction Results:', {
       name: extractedName,
@@ -261,7 +223,7 @@ IMPORTANT: Use this exact format with these exact header names. The app will ext
     setLoading(true);
 
     try {
-      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
 
       // Get auth token from localStorage
       const authToken = typeof window !== 'undefined' ? localStorage.getItem('crooked-finger-token') : null;
@@ -378,11 +340,11 @@ IMPORTANT: Use this exact format with these exact header names. The app will ext
                     {msg.images && msg.images.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
                         {msg.images.map((image, idx) => {
-                          const isPdf = isPDF(image);
-                          console.log(`🖼️ Rendering image ${idx}: isPDF=${isPdf}, first 50 chars:`, image.substring(0, 50));
+                          const isFilePdf = isPdf(image);
+                          console.log(`🖼️ Rendering image ${idx}: isPDF=${isFilePdf}, first 50 chars:`, image.substring(0, 50));
                           return (
                           <div key={idx}>
-                            {isPdf ? (
+                            {isFilePdf ? (
                               <div className="h-16 w-16 rounded-lg border-2 border-primary overflow-hidden bg-white relative">
                                 <object
                                   data={image}
@@ -468,7 +430,7 @@ IMPORTANT: Use this exact format with these exact header names. The app will ext
             <div className="flex flex-wrap gap-2">
               {attachedImages.map((image, index) => (
                 <div key={index} className="relative group">
-                  {isPDF(image) ? (
+                  {isPdf(image) ? (
                     <div className="h-20 w-20 rounded-lg border-2 border-primary overflow-hidden bg-white">
                       <object
                         data={image}

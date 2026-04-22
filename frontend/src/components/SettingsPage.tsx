@@ -1,25 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { AIModelSelector } from './AIModelSelector';
-import AIUsageDashboardComponent from './AIUsageDashboard';
-
 interface SettingsPageProps {
   user?: { id: string; username: string; email: string } | null;
   onLogout?: () => void;
 }
 
-type SettingsTab = 'models' | 'usage' | 'account';
-
 export function SettingsPage({ user, onLogout }: SettingsPageProps) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('models');
-
-  const tabs = [
-    { id: 'models' as SettingsTab, label: 'AI Models', icon: '🤖' },
-    { id: 'usage' as SettingsTab, label: 'Usage', icon: '📊' },
-    ...(user ? [{ id: 'account' as SettingsTab, label: 'Account', icon: '👤' }] : []),
-  ];
-
   return (
     <div className="h-full overflow-y-scroll p-6">
       <div className="w-full space-y-6">
@@ -28,52 +14,26 @@ export function SettingsPage({ user, onLogout }: SettingsPageProps) {
           <p className="text-muted-foreground">Customize your Crooked Finger experience</p>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-border max-w-3xl mx-auto">
-          <div className="flex gap-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
-                }`}
-              >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* AI Info */}
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-semibold mb-1">AI</h2>
+              <p className="text-sm text-muted-foreground">Powered by z.ai</p>
+            </div>
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl p-4 border border-primary/10 max-w-md">
+              <p className="text-sm text-sidebar-foreground">
+                Pattern translation and chat are handled by the z.ai Anthropic-compatible proxy.
+                No configuration needed — just use the app.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {/* Tab Content */}
-        <div className="pt-2 min-h-[400px] max-w-3xl mx-auto">
-          {activeTab === 'models' && (
+          {/* Account */}
+          {user && (
             <div className="space-y-4">
               <div>
-                <h2 className="text-xl font-semibold mb-1">AI Model Configuration</h2>
-                <p className="text-sm text-muted-foreground">Choose which AI models to use for assistance</p>
-              </div>
-              <AIModelSelector />
-            </div>
-          )}
-
-          {activeTab === 'usage' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-xl font-semibold mb-1">AI Usage Dashboard</h2>
-                <p className="text-sm text-muted-foreground">Monitor your AI model usage and quotas</p>
-              </div>
-              <AIUsageDashboardComponent />
-            </div>
-          )}
-
-          {activeTab === 'account' && user && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-xl font-semibold mb-1">Account Settings</h2>
+                <h2 className="text-xl font-semibold mb-1">Account</h2>
                 <p className="text-sm text-muted-foreground">Manage your account</p>
               </div>
               <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl p-4 border border-primary/10 max-w-md">

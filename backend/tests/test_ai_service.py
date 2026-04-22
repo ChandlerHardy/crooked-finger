@@ -117,33 +117,6 @@ class TestChat:
         assert image_blocks[0]["source"]["media_type"] == "image/png"
 
 
-class TestCompatShims:
-    """The GraphQL surface expects usage/config/reset methods to keep working."""
-
-    def test_usage_stats_has_default_model(self):
-        svc = AIService()
-        stats = svc.get_usage_stats()
-        assert "claude-sonnet-4-5-20250929" in stats
-
-    def test_provider_config_reports_zai(self):
-        svc = AIService()
-        config = svc.get_ai_provider_config()
-        assert config["current_provider"] == "zai"
-        assert config["selected_model"] == "claude-sonnet-4-5-20250929"
-
-    def test_set_ai_model_is_noop_but_successful(self):
-        svc = AIService()
-        result = svc.set_ai_model(model_name="some-other-model")
-        assert result["success"] is True
-        # Model selection is disabled; we always report the default
-        assert result["selected_model"] == "claude-sonnet-4-5-20250929"
-
-    def test_reset_daily_usage_succeeds(self):
-        svc = AIService()
-        result = svc.reset_daily_usage()
-        assert result["success"] is True
-
-
 class TestExtractText:
     def test_concatenates_text_blocks(self):
         resp = SimpleNamespace(
