@@ -5,10 +5,9 @@ from strawberry.types import Info
 from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
-    User, AuthResponse, CrochetProject, Conversation, ChatResponse, ResetUsageResponse,
+    User, AuthResponse, CrochetProject, Conversation, ChatResponse,
     RegisterInput, LoginInput,
-    CreateProjectInput, UpdateProjectInput, CreateConversationInput, UpdateConversationInput,
-    AIProviderConfig
+    CreateProjectInput, UpdateProjectInput, CreateConversationInput, UpdateConversationInput
 )
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
@@ -520,60 +519,6 @@ class Mutation:
             )
         finally:
             db.close()
-
-    @strawberry.field
-    async def reset_daily_usage(self) -> ResetUsageResponse:
-        """Reset all AI model usage for today"""
-        try:
-            result = ai_service.reset_daily_usage()
-            return ResetUsageResponse(
-                success=result["success"],
-                message=result["message"],
-                reset_date=result["reset_date"]
-            )
-        except Exception as e:
-            return ResetUsageResponse(
-                success=False,
-                message=f"Failed to reset usage: {str(e)}",
-                reset_date=None
-            )
-
-    @strawberry.field
-    async def set_ai_model(
-        self,
-        model_name: Optional[str] = None,
-        priority_order: Optional[list[str]] = None
-    ) -> AIProviderConfig:
-        """
-        Configure AI model selection
-        Args:
-            model_name: Specific model to use (e.g., "deepseek/deepseek-chat-v3.1:free"), or None for smart routing
-            priority_order: Custom fallback order for models (for smart routing mode)
-        """
-        _validate_length(model_name, MAX_SHORT_STRING_LENGTH, "model_name")
-        if priority_order:
-            for i, model in enumerate(priority_order):
-                _validate_length(model, MAX_SHORT_STRING_LENGTH, f"priority_order[{i}]")
-
-        result = ai_service.set_ai_model(model_name=model_name, priority_order=priority_order)
-
-        if not result["success"]:
-            # Return error in config format
-            return AIProviderConfig(
-                use_openrouter=False,
-                current_provider="error",
-                selected_model=None,
-                available_models=[],
-                model_priority_order=[]
-            )
-
-        return AIProviderConfig(
-            use_openrouter=result["use_openrouter"],
-            current_provider=result["current_provider"],
-            selected_model=result.get("selected_model"),
-            available_models=result.get("available_models", []),
-            model_priority_order=result.get("model_priority_order", [])
-        )
 
 async def _chat_with_diagram_generation(message: str, context: Optional[str], chat_history: str = "") -> str:
     """Handle chat requests that include diagram generation"""

@@ -128,37 +128,4 @@ class ChatResponse:
     diagram_png: Optional[str] = None
     has_pattern: bool = False
 
-@strawberry.type
-class ModelUsageStats:
-    model_name: str
-    current_usage: int
-    daily_limit: int
-    remaining: int
-    percentage_used: float
-    priority: int
-    use_case: str
-    total_input_characters: int
-    total_output_characters: int
-    total_input_tokens: int
-    total_output_tokens: int
-
-@strawberry.type
-class AIUsageDashboard:
-    total_requests_today: int
-    total_remaining: int
-    models: List[ModelUsageStats]
-
-@strawberry.type
-class ResetUsageResponse:
-    success: bool
-    message: str
-    reset_date: Optional[str] = None
-
-@strawberry.type
-class AIProviderConfig:
-    use_openrouter: bool
-    current_provider: str  # "openrouter", "gemini", or "auto"
-    selected_model: Optional[str] = None  # Specific model name or None for smart routing
-    available_models: List[str] = strawberry.field(default_factory=list)
-    model_priority_order: List[str] = strawberry.field(default_factory=list)
 

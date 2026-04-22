@@ -59,7 +59,6 @@ interface SavedPattern {
   instructions?: string;
   materials?: string;
   estimatedTime?: string;
-  videoId?: string;
   thumbnailUrl?: string;
   images?: string[];
   isFavorite: boolean;
@@ -220,11 +219,6 @@ export default function Home() {
       setSavedPatterns([]);
     }
   }, [projectsData]);
-  // const [chatWithAssistant, { loading: chatLoading }] = useMutation<
-  //   ChatWithAssistantResponse,
-  //   ChatWithAssistantVariables
-  // >(CHAT_WITH_ASSISTANT);
-
   // GraphQL mutations
   // GraphQL mutations using fetch
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -252,7 +246,7 @@ export default function Home() {
     try {
       // First load conversations from backend if user is authenticated
       if (authToken) {
-        const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+        const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
         
         const response = await fetch(graphqlUrl, {
           method: 'POST',
@@ -415,7 +409,7 @@ export default function Home() {
   const handleCreateNewChat = async () => {
     if (authToken) {
       // Create conversation on backend
-      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
       
       try {
         const response = await fetch(graphqlUrl, {
@@ -516,7 +510,7 @@ export default function Home() {
     if (conversation?.backendId && authToken) {
       setConversationLoading(true);
       try {
-        const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+        const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
 
         const response = await fetch(graphqlUrl, {
           method: 'POST',
@@ -640,7 +634,7 @@ export default function Home() {
 
     try {
       // Use fetch() directly for GraphQL call
-      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+      const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
 
       // Create conversation on backend if needed
       if (!backendConversationId) {
@@ -851,10 +845,9 @@ export default function Home() {
     }
   };
 
-  const handleSavePattern = async (patternData: Partial<SavedPattern>) => {
+  const handleSavePattern = async (patternData: SavedPattern) => {
     try {
-      // Create pattern in backend from manual creation
-      const fullPattern = patternData as SavedPattern;
+      const fullPattern = patternData;
       await createProjectMutation({
         input: {
           name: fullPattern.name,
@@ -1024,7 +1017,7 @@ export default function Home() {
                 const conversationToDelete = conversations.find(c => c.id === id);
                 if (conversationToDelete?.backendId && authToken) {
                   try {
-                    const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://150.136.38.166:8001/crooked-finger/graphql';
+                    const graphqlUrl = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8001/crooked-finger/graphql';
                     
                     await fetch(graphqlUrl, {
                       method: 'POST',

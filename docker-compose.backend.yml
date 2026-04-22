@@ -32,6 +32,7 @@ services:
       - DATABASE_URL=postgresql://crochet_user:crochet_secure_password_2024@postgres:5432/crooked_finger_db
       - ENVIRONMENT=production
       - DEBUG=false
+      - ZAI_API_KEY=${ZAI_API_KEY:-}
     restart: unless-stopped
     depends_on:
       postgres:

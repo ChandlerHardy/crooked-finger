@@ -33,7 +33,6 @@ interface Pattern {
   instructions?: string;
   materials?: string;
   estimatedTime?: string;
-  videoId?: string;
   thumbnailUrl?: string;
   images?: string[];
   isFavorite: boolean;

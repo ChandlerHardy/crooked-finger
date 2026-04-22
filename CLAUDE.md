@@ -6,14 +6,13 @@ Crooked Finger - A crochet and knitting pattern assistant with AI-powered patter
 ## Tech Stack
 - **Frontend**: Next.js 15 + TypeScript, Tailwind CSS, Apollo GraphQL
 - **Backend**: FastAPI + Strawberry GraphQL, PostgreSQL
-- **AI**: Multi-Model System (Gemini + OpenRouter) - Gemini for quality, OpenRouter for free unlimited
+- **AI**: z.ai Anthropic-compatible proxy (routes to GLM-4.7 for translation, GLM-4.5-Air for chat)
 - **Diagram Generation**: Professional matplotlib charts + traditional SVG generators
 - **Deployment**: Vercel (frontend) + Oracle Cloud Infrastructure (backend)
 
 ## 🖥️ Server Access
 **OCI Server:**
-- **IP**: `150.136.38.166`
-- **SSH**: `ssh ubuntu@150.136.38.166 -i /Users/chandlerhardy/.ssh/ampere.key`
+- **SSH**: `ssh ubuntu@<your-oci-ip> -i /Users/chandlerhardy/.ssh/ampere.key`
 - **Location**: `/home/ubuntu/crooked-finger/`
 
 ## Port Allocation
@@ -28,21 +27,20 @@ Crooked Finger - A crochet and knitting pattern assistant with AI-powered patter
 
 ## ⚙️ Key Environment Variables
 **Backend (.env on OCI server):**
-- `GEMINI_API_KEY=***` (Google AI Studio API key - DO NOT COMMIT)
+- `ZAI_API_KEY=***` (z.ai subscription key - DO NOT COMMIT)
 - `CORS_ORIGINS=https://crookedfinger.chandlerhardy.com,https://crooked-finger-app.vercel.app,https://backend.chandlerhardy.com,http://localhost:3000,http://localhost:3001`
 - `ADMIN_SECRET=***` (DO NOT COMMIT)
 - `DATABASE_URL=postgresql://crochet_user:***@postgres:5432/crooked_finger_db`
 
 **Frontend (.env.local):**
 - `NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8001/crooked-finger/graphql`
-- `GEMINI_API_KEY=***` (DO NOT COMMIT - same as backend)
 
 **Frontend (Vercel):**
 - `NEXT_PUBLIC_GRAPHQL_URL=https://backend.chandlerhardy.com/crooked-finger/graphql`
 
 ## Core Features
 1. **Pattern Translation**: Convert crochet/knitting notation to readable instructions
-2. **AI Assistant**: Multi-model AI (Gemini + OpenRouter) with smart routing and image support
+2. **AI Assistant**: z.ai proxy (Anthropic-compatible) with image and PDF support
 3. **Conversation Management**: Cross-platform chat sync with conversation history
 4. **Professional Diagram Generation**: matplotlib-based crochet charts with authentic symbols
 5. **Pattern Library**: Browse, save, and manage patterns with image galleries and PDF support
@@ -115,7 +113,7 @@ docker exec -it crooked-finger-dev-db psql -U crochet_dev_user -d crooked_finger
 ### Production Server
 ```bash
 # SSH to server
-ssh ubuntu@150.136.38.166 -i /Users/chandlerhardy/.ssh/ampere.key
+ssh ubuntu@<your-oci-ip> -i /Users/chandlerhardy/.ssh/ampere.key
 
 # Check backend status
 cd crooked-finger && docker-compose -f docker-compose.backend.yml ps
@@ -124,17 +122,12 @@ cd crooked-finger && docker-compose -f docker-compose.backend.yml ps
 cd crooked-finger && docker-compose -f docker-compose.backend.yml restart backend
 
 # Deploy backend updates
-./deploy-backend-to-oci.sh 150.136.38.166
+./deploy-backend-to-oci.sh <your-oci-ip>
 
 # Test GraphQL chatWithAssistant mutation
 curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
   -H "Content-Type: application/json" \
   -d '{"query":"mutation { chatWithAssistant(message: \"What does sc2tog mean?\") }"}'
-
-# Test AI usage dashboard
-curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"query { aiUsageDashboard { totalRequestsToday totalRemaining models { modelName currentUsage dailyLimit remaining percentageUsed } } }"}'
 
 # View backend logs
 cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
@@ -147,7 +140,7 @@ cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
 
 **Solution**: Update CORS_ORIGINS in `.env` on server:
 ```bash
-ssh ubuntu@150.136.38.166 -i /Users/chandlerhardy/.ssh/ampere.key
+ssh ubuntu@<your-oci-ip> -i /Users/chandlerhardy/.ssh/ampere.key
 cd crooked-finger
 # Edit .env and update CORS_ORIGINS, then:
 docker-compose -f docker-compose.backend.yml down
@@ -157,44 +150,28 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 **Note**: The backend config uses `case_sensitive = False` to properly read `CORS_ORIGINS` from environment.
 
 ### AI Service Not Working
-**Symptoms**: "AI service not configured" or Gemini API errors
+**Symptoms**: "AI service not configured"
 
-**Root Cause**: GEMINI_API_KEY must be explicitly added to docker-compose.backend.yml environment section
+**Root Cause**: `ZAI_API_KEY` must be set in `.env` on the server
 
 **Solution**:
-1. Get API key from https://aistudio.google.com/apikey
-2. Set in server `.env`: `GEMINI_API_KEY=your_key_here`
-3. **IMPORTANT**: Add to docker-compose.backend.yml under `backend.environment`:
-   ```yaml
-   - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-   ```
-4. Restart with env file:
+1. Get key from https://z.ai
+2. Set in server `.env`: `ZAI_API_KEY=your_key_here`
+3. Restart with env file:
    ```bash
    docker-compose -f docker-compose.backend.yml down
    docker-compose -f docker-compose.backend.yml --env-file .env up -d
    ```
-5. Verify it's loaded: `docker-compose -f docker-compose.backend.yml exec backend printenv | grep GEMINI`
-
-**Note**: Simply having the key in `.env` is NOT enough - it must be explicitly passed in docker-compose.yml
+4. Verify it's loaded: `docker-compose -f docker-compose.backend.yml exec backend printenv | grep ZAI`
 
 ## 🤖 AI Integration
-**Multi-Provider Smart Routing System** ⭐ **FULLY OPERATIONAL**
+**z.ai Anthropic-compatible proxy** ⭐ **FULLY OPERATIONAL**
 
-### AI Models Available
-**OpenRouter (Free & Unlimited):**
-- **Qwen 3 30B**: High-quality free model with no rate limits
-- **DeepSeek Chat v3.1**: Fast free model for quick responses
-
-**Gemini (High Quality with Daily Quotas):**
-- **Gemini 2.5 Pro**: 100 requests/day - Premium quality for complex pattern analysis
-- **Gemini 2.5 Flash Preview**: 250 requests/day - Latest features and fast performance
-- **Gemini 2.5 Flash**: 400 requests/day - Balanced speed and quality
-- **Gemini 2.5 Flash-Lite**: 1,000 requests/day - High-speed for simple queries
+### Model
+- Routes through z.ai to **GLM-4.7** (translation) and **GLM-4.5-Air** (chat)
+- Single `ZAI_API_KEY` env var — no quota tracking, no model selection UI
 
 ### Features
-- ✅ Smart model selection based on query complexity
-- ✅ Configurable fallback order with drag-to-reorder
-- ✅ Real-time usage tracking with dashboard (Gemini only)
 - ✅ Expert in both crochet and knitting patterns
 - ✅ Multimodal support (images, PDFs)
 
@@ -275,18 +252,16 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 
 ### ✅ Core Features (Both Platforms)
 - Pattern/Project Management, AI Chat, Conversation Management, Authentication
-- Multimodal AI (images in chat), AI model selection with smart routing
-- GraphQL backend integration, Error handling, Empty states
+- Multimodal AI (images in chat), GraphQL backend integration, Error handling, Empty states
 
 ### Platform-Specific Features
-**Web Only**: Diagram generation, Zoom/pan image viewer, AI usage dashboard
+**Web Only**: Diagram generation, Zoom/pan image viewer
 **iOS Only**: Pull-to-refresh, Camera integration, Biometric auth (Face ID/Touch ID)
 
 ## 🚧 Remaining Tasks
 1. **Image Viewer on iOS**: Professional zoom/pan like web
-2. **AI Usage Dashboard on iOS**: Port token usage tracking from web
-4. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
-5. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments, knitting charts)
+2. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
+3. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments, knitting charts)
 
 ## 🔄 Development Workflow
 1. **Make changes** locally in `frontend/` or `backend/` directories
@@ -296,7 +271,7 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 3. **Build test**: `cd frontend && npm run build` to check for TypeScript errors
 4. **Commit & push** to `main` branch
 5. **Frontend auto-deploys** via Vercel (triggered by push to `main`)
-6. **Backend deploy**: Run `./deploy-backend-to-oci.sh 150.136.38.166`
+6. **Backend deploy**: Run `./deploy-backend-to-oci.sh <your-oci-ip>`
 
 ## 🏗️ Project Structure Notes
 - **Monorepo-style**: Frontend and backend are separate subdirectories
@@ -312,7 +287,7 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 **Status**: ✅ **FULLY OPERATIONAL**
 
 ### Nginx Reverse Proxy
-- **Server**: backend.chandlerhardy.com (150.136.38.166)
+- **Server**: backend.chandlerhardy.com
 - **SSL Certificate**: Let's Encrypt (auto-renewed)
 - **Configuration**: `/etc/nginx/sites-available/backend.chandlerhardy.com`
 
@@ -328,11 +303,11 @@ Both projects share the same nginx server with different paths:
 - TLS 1.2/1.3 only
 
 ## 📝 Recent Major Updates
+- **April 2026**: Migrated AI cascade to z.ai Anthropic-compatible proxy; dropped Gemini + OpenRouter
+- **April 2026**: Removed YouTube tab (RapidAPI ToS risk); dead backend services + UI components purged
 - **October 2025**: Knitting expertise added to all AI system prompts alongside crochet
-- **October 2025**: Web app reached feature parity with iOS (authentication, conversations, multimodal AI, model selection)
-- **October 2025**: OpenRouter integration for unlimited free AI requests (Qwen, DeepSeek models)
+- **October 2025**: Web app reached feature parity with iOS (authentication, conversations, multimodal AI)
 - **October 2025**: PDF support with inline rendering and caching
-- **October 2025**: AI model configuration syncs with backend for proper routing
 
 ---
-*Last Updated: October 17, 2025*
+*Last Updated: April 22, 2026*

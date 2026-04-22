@@ -10,9 +10,8 @@ The previous Gemini/OpenRouter cascade (8 provider methods, smart routing,
 fallback chains, per-model quota tracking) has been collapsed into a single
 client because z.ai handles routing internally.
 
-The GraphQL surface (usage dashboard, provider config, set-model, reset-usage)
-is preserved as no-op / single-model stubs so the frontend does not need to
-change in this phase.
+The dead GraphQL surface (usage dashboard, provider config, set-model,
+reset-usage) was removed in Phase 3 housekeeping.
 """
 from __future__ import annotations
 
@@ -276,75 +275,6 @@ class AIService:
         except Exception as exc:  # noqa: BLE001
             logger.exception("z.ai chat call failed")
             return f"Sorry, I'm having trouble responding right now: {exc}"
-
-    # -- public: GraphQL compatibility stubs -----------------------------------
-    # These are called from queries.py / mutations.py. The cascade/quota
-    # machinery is gone, but the GraphQL shape is preserved so the frontend
-    # keeps working until Phase 3 housekeeping tears out the UI.
-
-    def get_usage_stats(self) -> Dict[str, Dict[str, Any]]:
-        """Return a single-model usage stat block.
-
-        z.ai does not expose per-request quota headers through this endpoint,
-        so we report effectively-unlimited and zero usage. The dashboard UI
-        still renders cleanly.
-        """
-        return {
-            self._default_model: {
-                "current_usage": 0,
-                "daily_limit": 999_999,
-                "remaining": 999_999,
-                "percentage_used": 0,
-                "priority": 1,
-                "use_case": "z.ai (GLM-4.7)",
-                "total_input_characters": 0,
-                "total_output_characters": 0,
-                "total_input_tokens": 0,
-                "total_output_tokens": 0,
-            }
-        }
-
-    def reset_daily_usage(self) -> Dict[str, Any]:
-        """No-op: z.ai manages its own quotas."""
-        from datetime import date
-
-        return {
-            "success": True,
-            "message": "Usage tracking is managed by z.ai; nothing to reset.",
-            "reset_date": date.today().isoformat(),
-        }
-
-    def get_ai_provider_config(self) -> Dict[str, Any]:
-        """Return a single-model config payload."""
-        return {
-            "use_openrouter": False,
-            "current_provider": "zai",
-            "selected_model": self._default_model,
-            "available_models": [self._default_model],
-            "model_priority_order": [],
-        }
-
-    def set_ai_model(
-        self,
-        model_name: Optional[str] = None,
-        priority_order: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """No-op: model is fixed to the z.ai default.
-
-        Returns success with the single available model so frontend UX that
-        POSTs updates does not error. Silently ignores input.
-        """
-        return {
-            "success": True,
-            "message": (
-                "Model selection is disabled; z.ai routes all requests "
-                f"through {self._default_model}."
-            ),
-            "use_openrouter": False,
-            "current_provider": "zai",
-            "selected_model": self._default_model,
-            "model_priority_order": [],
-        }
 
 
 # ---------------------------------------------------------------------------

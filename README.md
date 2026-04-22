@@ -42,11 +42,9 @@ Crooked Finger transforms the crafting experience by combining AI intelligence w
 - Integrated AI chat history for each project
 - Cross-platform sync between web and iOS (coming soon)
 
-### 🔄 **Smart AI Model Routing**
-- Multi-provider system with both free (OpenRouter) and premium (Gemini) models
-- Intelligent fallback chain ensures 100% uptime
-- Complexity-based routing: simple queries use free models, complex analysis uses premium
-- Real-time usage dashboard tracks quota consumption
+### 🔄 **AI via z.ai**
+- Single-provider routing through z.ai's Anthropic-compatible proxy
+- No quota management or model selection needed
 
 ---
 
@@ -64,8 +62,7 @@ Crooked Finger transforms the crafting experience by combining AI intelligence w
 - **nginx** reverse proxy with Let's Encrypt SSL
 
 ### AI Integration
-- **Google Gemini** (2.5 Pro, Flash, Flash-Lite) for high-quality analysis
-- **OpenRouter** (Qwen 3 30B, DeepSeek v3.1) for unlimited free requests
+- **z.ai** Anthropic-compatible proxy (routes to GLM-4.7 / GLM-4.5-Air)
 ### Diagram Generation
 - **matplotlib** for professional crochet charts
 - **Pillow (PIL)** for image processing
@@ -81,8 +78,6 @@ Crooked Finger transforms the crafting experience by combining AI intelligence w
 - ✅ **Project Tracking**: Manage active projects with notes and images
 - ✅ **Pattern Library**: Centralized storage with search and filtering
 - ✅ **Image Viewer**: Professional zoom/pan for project photos
-- ✅ **AI Model Selection**: Choose between free and premium AI models
-- ✅ **Usage Dashboard**: Track AI quota consumption in real-time
 - ✅ **User Authentication**: JWT-based login with Argon2 password hashing
 - ✅ **Cross-Platform**: Web app with iOS companion (in development)
 
@@ -132,7 +127,7 @@ NEXT_PUBLIC_GRAPHQL_URL=http://localhost:8001/crooked-finger/graphql
 
 **Backend (.env)**:
 ```
-GEMINI_API_KEY=your_gemini_api_key_here
+ZAI_API_KEY=your_zai_api_key_here
 DATABASE_URL=postgresql://crochet_dev_user:devpassword@localhost:5433/crooked_finger_dev
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 ```
@@ -148,7 +143,7 @@ The frontend automatically deploys to Vercel on every push to `main`:
 ### Backend (Oracle Cloud)
 Deploy backend updates to OCI:
 ```bash
-./deploy-backend-to-oci.sh 150.136.38.166
+./deploy-backend-to-oci.sh <your-oci-ip>
 ```
 
 Backend endpoints:
@@ -192,22 +187,6 @@ mutation {
   chatWithAssistant(message: "What does sc2tog mean?") {
     response
     modelUsed
-  }
-}
-```
-
-### Get AI Usage Dashboard
-```graphql
-query {
-  aiUsageDashboard {
-    totalRequestsToday
-    totalRemaining
-    models {
-      modelName
-      currentUsage
-      dailyLimit
-      percentageUsed
-    }
   }
 }
 ```
