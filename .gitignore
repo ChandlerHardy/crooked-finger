@@ -50,3 +50,4 @@ next-env.d.ts
 backend/crooked_finger.db
 .env
 .mcp.json
+.grepai/
