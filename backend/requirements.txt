@@ -11,7 +11,8 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 
 # AI Integration
-google-genai==0.8.0
+# z.ai exposes an Anthropic-compatible proxy; we use the official SDK.
+anthropic>=0.40.0,<1.0.0
 httpx==0.25.2
 
 # Diagram Generation

@@ -9,9 +9,8 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 10080  # 7 days
 
-    # External API Keys
-    gemini_api_key: Optional[str] = None
-    openrouter_api_key: Optional[str] = None
+    # AI provider: z.ai exposes an Anthropic-compatible proxy
+    zai_api_key: Optional[str] = None
 
     # Environment
     environment: str = "development"
