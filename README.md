@@ -11,7 +11,6 @@
 Crafters face several challenges when working with crochet and knitting patterns:
 
 - **Cryptic Abbreviations**: Patterns use dense abbreviation systems (sc, dc, sl st, k2tog, etc.) that are intimidating for beginners and easy to misinterpret
-- **YouTube Tutorials**: Video patterns are time-consuming to follow, requiring constant pausing and rewinding to catch instructions
 - **Pattern Organization**: Crafters accumulate patterns from books, websites, and videos with no centralized way to manage them
 - **Project Tracking**: Keeping notes on gauge, yarn used, modifications, and progress is often done on paper or scattered across apps
 - **Complex Diagrams**: Traditional pattern charts can be hard to read, especially for visual learners who need clearer representations
@@ -25,11 +24,6 @@ Crooked Finger transforms the crafting experience by combining AI intelligence w
 - Supports both crochet and knitting terminology
 - Multimodal AI can analyze pattern images and PDFs directly
 - Contextual understanding helps clarify ambiguous instructions
-
-### 📺 **YouTube Transcript Extraction**
-- Extract written patterns from video tutorials automatically
-- Save transcripts to your pattern library for quick reference
-- No more endless pausing and rewinding
 
 ### 📊 **Professional Diagram Generation**
 - Converts text patterns into visual crochet charts using matplotlib
@@ -72,8 +66,6 @@ Crooked Finger transforms the crafting experience by combining AI intelligence w
 ### AI Integration
 - **Google Gemini** (2.5 Pro, Flash, Flash-Lite) for high-quality analysis
 - **OpenRouter** (Qwen 3 30B, DeepSeek v3.1) for unlimited free requests
-- **RapidAPI** YouTube service for video transcript extraction
-
 ### Diagram Generation
 - **matplotlib** for professional crochet charts
 - **Pillow (PIL)** for image processing
@@ -85,7 +77,6 @@ Crooked Finger transforms the crafting experience by combining AI intelligence w
 
 - ✅ **Pattern Translation**: Convert "sc2tog, ch 3, dc in next 5 sts" into readable instructions
 - ✅ **Multimodal AI**: Upload pattern PDFs or images for analysis
-- ✅ **YouTube Integration**: Extract patterns from video tutorials
 - ✅ **Diagram Generation**: Create visual charts from text patterns
 - ✅ **Project Tracking**: Manage active projects with notes and images
 - ✅ **Pattern Library**: Centralized storage with search and filtering
@@ -183,7 +174,7 @@ crooked-finger/
 │   │   ├── main.py          # FastAPI entry point
 │   │   ├── database/        # SQLAlchemy models
 │   │   ├── schemas/         # GraphQL schema
-│   │   └── services/        # AI, pattern, YouTube services
+│   │   └── services/        # AI, pattern, diagram services
 │   └── requirements.txt
 │
 ├── docker-compose.dev.yml   # Local PostgreSQL database
@@ -201,17 +192,6 @@ mutation {
   chatWithAssistant(message: "What does sc2tog mean?") {
     response
     modelUsed
-  }
-}
-```
-
-### Fetch YouTube Transcript
-```graphql
-mutation {
-  fetchYoutubeTranscript(videoUrl: "https://youtube.com/watch?v=VIDEO_ID") {
-    success
-    transcript
-    wordCount
   }
 }
 ```

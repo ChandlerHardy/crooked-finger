@@ -6,7 +6,7 @@ from app.database.connection import get_db
 from app.database import models
 from app.schemas.types import (
     User, AuthResponse, CrochetProject, Conversation, ChatResponse, ResetUsageResponse,
-    YouTubeTranscriptResponse, ExtractedPattern, RegisterInput, LoginInput,
+    RegisterInput, LoginInput,
     CreateProjectInput, UpdateProjectInput, CreateConversationInput, UpdateConversationInput,
     AIProviderConfig
 )
@@ -20,7 +20,6 @@ from app.services.granny_square_service import granny_square_service
 from app.services.flowing_granny_service import flowing_granny_service
 from app.services.matplotlib_crochet_service import matplotlib_crochet_service
 from app.services.rag_service import rag_service
-from app.services.youtube_service_rapidapi import youtube_service_rapidapi
 import re
 from sqlalchemy.orm import Session
 
@@ -29,9 +28,6 @@ MAX_CHAT_MESSAGE_LENGTH = 50_000       # 50KB for chat messages
 MAX_PATTERN_TEXT_LENGTH = 100_000      # 100KB for pattern text fields
 MAX_SHORT_STRING_LENGTH = 1_000        # 1KB for names, titles, short fields
 MAX_IMAGE_DATA_LENGTH = 10_000_000     # 10MB for base64-encoded image data
-MAX_TRANSCRIPT_LENGTH = 500_000        # 500KB for YouTube transcripts
-MAX_URL_LENGTH = 2_048                 # 2KB for URLs
-
 
 def _validate_length(value: Optional[str], max_length: int, field_name: str) -> None:
     """Raise if a string input exceeds its max allowed length."""
@@ -579,110 +575,6 @@ class Mutation:
             model_priority_order=result.get("model_priority_order", [])
         )
 
-    @strawberry.field
-    async def fetch_youtube_transcript(
-        self,
-        video_url: str,
-        languages: Optional[list[str]] = None
-    ) -> YouTubeTranscriptResponse:
-        """Fetch transcript from a YouTube video"""
-        _validate_length(video_url, MAX_URL_LENGTH, "video_url")
-        try:
-            result = youtube_service_rapidapi.get_transcript(video_url, languages)
-            return YouTubeTranscriptResponse(
-                success=result["success"],
-                video_id=result.get("video_id"),
-                transcript=result.get("transcript"),
-                word_count=result.get("word_count"),
-                language=result.get("language"),
-                thumbnail_url=result.get("thumbnail_url"),
-                thumbnail_url_hq=result.get("thumbnail_url_hq"),
-                error=result.get("error")
-            )
-        except Exception as e:
-            return YouTubeTranscriptResponse(
-                success=False,
-                error=f"Unexpected error: {str(e)}"
-            )
-
-    @strawberry.field
-    async def extract_pattern_from_transcript(
-        self,
-        transcript: str,
-        video_id: Optional[str] = None,
-        thumbnail_url: Optional[str] = None
-    ) -> ExtractedPattern:
-        """Extract crochet or knitting pattern from YouTube video transcript using AI"""
-        _validate_length(transcript, MAX_TRANSCRIPT_LENGTH, "transcript")
-        _validate_length(video_id, MAX_SHORT_STRING_LENGTH, "video_id")
-        _validate_length(thumbnail_url, MAX_URL_LENGTH, "thumbnail_url")
-        try:
-            # Use AI to extract pattern information from transcript
-            # Gemini 2.5 Flash has 1M token context, so we can use most of the transcript
-            # Limit to ~100k characters (~25k tokens) to be safe
-            prompt = f"""Analyze this YouTube video transcript and extract a crochet or knitting pattern if present.
-
-Transcript:
-{transcript[:100000]}
-
-Please extract and format:
-1. Pattern Name: A descriptive name for the pattern
-2. Pattern Notation: The abbreviated notation (crochet: "ch 4, 12 dc in ring, sl st", knitting: "CO 40, k2, p2 rib")
-3. Pattern Instructions: Step-by-step instructions in plain English
-4. Difficulty Level: beginner, intermediate, or advanced
-5. Materials: What yarn/fiber weight, hook/needle size, etc. are mentioned
-6. Estimated Time: If mentioned, how long to complete
-
-If no clear pattern is found, return null for pattern fields and explain what was found instead.
-
-Format your response as:
-NAME: [pattern name]
-NOTATION: [abbreviated notation]
-INSTRUCTIONS: [detailed instructions]
-DIFFICULTY: [level]
-MATERIALS: [materials list]
-TIME: [estimated time]
-"""
-
-            # Get AI response
-            ai_response = await ai_service.chat_about_pattern(
-                message=prompt,
-                project_context="",
-                chat_history=""
-            )
-
-            # Parse the AI response
-            pattern_data = _parse_pattern_response(ai_response)
-
-            if pattern_data:
-                return ExtractedPattern(
-                    success=True,
-                    pattern_name=pattern_data.get("name"),
-                    pattern_notation=pattern_data.get("notation"),
-                    pattern_instructions=pattern_data.get("instructions"),
-                    difficulty_level=pattern_data.get("difficulty"),
-                    materials=pattern_data.get("materials"),
-                    estimated_time=pattern_data.get("time"),
-                    video_id=video_id,
-                    thumbnail_url=thumbnail_url,
-                    error=None
-                )
-            else:
-                return ExtractedPattern(
-                    success=False,
-                    error="Could not extract a clear crochet or knitting pattern from the transcript",
-                    video_id=video_id,
-                    thumbnail_url=thumbnail_url
-                )
-
-        except Exception as e:
-            return ExtractedPattern(
-                success=False,
-                error=f"Error extracting pattern: {str(e)}",
-                video_id=video_id,
-                thumbnail_url=thumbnail_url
-            )
-
 async def _chat_with_diagram_generation(message: str, context: Optional[str], chat_history: str = "") -> str:
     """Handle chat requests that include diagram generation"""
     try:
@@ -869,63 +761,3 @@ def store_chat_message(db: Session, user_message: str, ai_response: str, user_id
         if conversation:
             conversation.updated_at = datetime.utcnow()
             db.commit()
-
-
-def _parse_pattern_response(ai_response: str) -> Optional[dict]:
-    """Parse AI response for pattern extraction"""
-    try:
-        pattern_data = {}
-
-        # Extract fields using regex - look for section headers at start of line
-        name_match = re.search(r'NAME:\s*(.+?)(?=\n\s*(?:NOTATION|INSTRUCTIONS|DIFFICULTY|MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        notation_match = re.search(r'NOTATION:\s*(.+?)(?=\n\s*(?:INSTRUCTIONS|DIFFICULTY|MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        instructions_match = re.search(r'INSTRUCTIONS:\s*(.+?)(?=\n\s*(?:DIFFICULTY|MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        difficulty_match = re.search(r'DIFFICULTY:\s*(.+?)(?=\n\s*(?:MATERIALS|TIME):|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        materials_match = re.search(r'MATERIALS:\s*(.+?)(?=\n\s*TIME:|$)', ai_response, re.IGNORECASE | re.DOTALL)
-        time_match = re.search(r'TIME:\s*(.+?)$', ai_response, re.IGNORECASE | re.DOTALL)
-
-        if name_match:
-            # Clean up name - should be single line only
-            name = name_match.group(1).strip()
-            # Take only first line if multiple lines captured
-            name = name.split('\n')[0].strip()
-            pattern_data["name"] = name
-        if notation_match:
-            pattern_data["notation"] = notation_match.group(1).strip()
-        if instructions_match:
-            # Remove any duplicate content that might appear after the instructions
-            instructions = instructions_match.group(1).strip()
-            # If instructions appear to be duplicated (same content twice), take only first half
-            half_length = len(instructions) // 2
-            first_half = instructions[:half_length].strip()
-            second_half = instructions[half_length:].strip()
-            if first_half and second_half and first_half == second_half:
-                # Exact duplicate - use only first half
-                pattern_data["instructions"] = first_half
-            else:
-                pattern_data["instructions"] = instructions
-        if difficulty_match:
-            difficulty = difficulty_match.group(1).strip().lower()
-            # Take only first line
-            difficulty = difficulty.split('\n')[0].strip()
-            # Extract just the difficulty word, ignore any extra text
-            for level in ['beginner', 'intermediate', 'advanced']:
-                if level in difficulty:
-                    pattern_data["difficulty"] = level
-                    break
-        if materials_match:
-            pattern_data["materials"] = materials_match.group(1).strip()
-        if time_match:
-            time = time_match.group(1).strip()
-            # Take only first line
-            time = time.split('\n')[0].strip()
-            pattern_data["time"] = time
-
-        # Return pattern data if at least name and notation are found
-        if pattern_data.get("name") and pattern_data.get("notation"):
-            return pattern_data
-
-        return None
-
-    except Exception:
-        return None

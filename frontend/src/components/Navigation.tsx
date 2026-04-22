@@ -1,4 +1,4 @@
-import { Home, MessageCircle, FolderOpen, BookOpen, Settings, Youtube, LogIn } from 'lucide-react';
+import { Home, MessageCircle, FolderOpen, BookOpen, Settings, LogIn } from 'lucide-react';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ThemeToggle';
 import Image from 'next/image';
@@ -17,7 +17,6 @@ export function Navigation({ currentPage, onPageChange, user, onLoginClick, onLo
     { id: 'chat', label: 'AI Assistant', icon: MessageCircle },
     { id: 'projects', label: 'My Projects', icon: FolderOpen },
     { id: 'patterns', label: 'Pattern Library', icon: BookOpen },
-    { id: 'youtube-test', label: 'YouTube Test', icon: Youtube },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
