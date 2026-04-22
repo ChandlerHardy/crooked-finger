@@ -8,7 +8,6 @@ import { ChatInterface } from '../components/ChatInterface';
 import { ProjectsPage } from '../components/ProjectsPage';
 import { ProjectDetailPage } from '../components/ProjectDetailPage';
 import { PatternLibrary } from '../components/PatternLibrary';
-import { YouTubeTest } from '../components/YouTubeTest';
 import { AuthModal } from '../components/AuthModal';
 import { ConversationList } from '../components/ConversationList';
 import { SettingsPage } from '../components/SettingsPage';
@@ -852,49 +851,23 @@ export default function Home() {
     }
   };
 
-  const handleSavePattern = async (patternData: Partial<SavedPattern> & { patternName?: string; patternNotation?: string; patternInstructions?: string; difficultyLevel?: string }) => {
+  const handleSavePattern = async (patternData: Partial<SavedPattern>) => {
     try {
-      // Check if it's a Pattern object (from manual creation) or pattern data (from YouTube)
-      if (patternData.id && patternData.notation) {
-        // Already a Pattern object from manual creation - create it in backend
-        const fullPattern = patternData as SavedPattern;
-        await createProjectMutation({
-          input: {
-            name: fullPattern.name,
-            patternText: fullPattern.notation,
-            translatedText: fullPattern.instructions,
-            difficultyLevel: fullPattern.difficulty,
-            estimatedTime: fullPattern.estimatedTime,
-            yarnWeight: fullPattern.materials,
-            imageData: fullPattern.images && fullPattern.images.length > 0 ? JSON.stringify(fullPattern.images) : null,
-            notes: null, // Patterns have no notes
-          }
-        });
-        await fetchProjects();
-        return;
-      }
-
-      // YouTube pattern data - transform and save to backend
-      const difficultyValue = patternData.difficultyLevel;
-      const validDifficulty = difficultyValue === 'beginner' || difficultyValue === 'intermediate' || difficultyValue === 'advanced'
-        ? difficultyValue
-        : 'beginner';
-
+      // Create pattern in backend from manual creation
+      const fullPattern = patternData as SavedPattern;
       await createProjectMutation({
         input: {
-          name: patternData.patternName || 'Untitled Pattern',
-          patternText: patternData.patternNotation || '',
-          translatedText: patternData.patternInstructions || '',
-          difficultyLevel: validDifficulty,
-          estimatedTime: patternData.estimatedTime || '',
-          yarnWeight: patternData.materials || '',
-          imageData: patternData.thumbnailUrl ? JSON.stringify([patternData.thumbnailUrl]) : null,
+          name: fullPattern.name,
+          patternText: fullPattern.notation,
+          translatedText: fullPattern.instructions,
+          difficultyLevel: fullPattern.difficulty,
+          estimatedTime: fullPattern.estimatedTime,
+          yarnWeight: fullPattern.materials,
+          imageData: fullPattern.images && fullPattern.images.length > 0 ? JSON.stringify(fullPattern.images) : null,
           notes: null, // Patterns have no notes
         }
       });
-      
       await fetchProjects();
-      setCurrentPage('patterns');
     } catch (error) {
       console.error('Error saving pattern:', error);
       alert('Failed to save pattern. Please try again.');
@@ -1127,8 +1100,6 @@ export default function Home() {
             onCreateProject={handleCreateProjectFromPattern}
           />
         );
-      case 'youtube-test':
-        return <YouTubeTest onNavigate={setCurrentPage} onSavePattern={handleSavePattern} />;
       case 'settings':
         return <SettingsPage user={user} onLogout={handleLogout} />;
       default:

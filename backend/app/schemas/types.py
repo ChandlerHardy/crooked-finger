@@ -162,26 +162,3 @@ class AIProviderConfig:
     available_models: List[str] = strawberry.field(default_factory=list)
     model_priority_order: List[str] = strawberry.field(default_factory=list)
 
-@strawberry.type
-class YouTubeTranscriptResponse:
-    success: bool
-    video_id: Optional[str] = None
-    transcript: Optional[str] = None
-    word_count: Optional[int] = None
-    language: Optional[str] = None
-    thumbnail_url: Optional[str] = None
-    thumbnail_url_hq: Optional[str] = None
-    error: Optional[str] = None
-
-@strawberry.type
-class ExtractedPattern:
-    success: bool
-    pattern_name: Optional[str] = None
-    pattern_notation: Optional[str] = None
-    pattern_instructions: Optional[str] = None
-    difficulty_level: Optional[str] = None
-    materials: Optional[str] = None
-    estimated_time: Optional[str] = None
-    video_id: Optional[str] = None
-    thumbnail_url: Optional[str] = None
-    error: Optional[str] = None

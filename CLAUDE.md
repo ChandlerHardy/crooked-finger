@@ -45,8 +45,7 @@ Crooked Finger - A crochet and knitting pattern assistant with AI-powered patter
 2. **AI Assistant**: Multi-model AI (Gemini + OpenRouter) with smart routing and image support
 3. **Conversation Management**: Cross-platform chat sync with conversation history
 4. **Professional Diagram Generation**: matplotlib-based crochet charts with authentic symbols
-5. **YouTube Transcript Extraction**: Extract patterns from craft tutorial videos via RapidAPI
-6. **Pattern Library**: Browse, save, and manage patterns with image galleries and PDF support
+5. **Pattern Library**: Browse, save, and manage patterns with image galleries and PDF support
 7. **Project Management**: Track projects with images, notes, and chat history
 8. **Professional Image Viewer**: Zoom, pan, and navigate project/pattern images
 9. **User Authentication**: JWT-based login/register with Argon2 password hashing
@@ -68,7 +67,6 @@ crooked-finger/
 │   │   │   ├── pattern_service.py        # Pattern parsing & diagram generation
 │   │   │   ├── matplotlib_crochet_service.py # Professional chart generation
 │   │   │   ├── granny_square_service.py  # Granny square charts (SVG)
-│   │   │   └── youtube_service.py        # YouTube transcript extraction
 │   │   └── utils/auth.py                 # JWT authentication (Argon2 hashing)
 │   ├── migrations/
 │   │   └── add_conversations_table.py    # Database migration for conversations
@@ -83,7 +81,6 @@ crooked-finger/
 │   │   │   ├── ChatInterface.tsx         # AI chat interface
 │   │   │   ├── PatternLibrary.tsx        # Pattern browsing & management
 │   │   │   ├── ProjectDetailPage.tsx     # Project management with image viewer
-│   │   │   └── YouTubeTest.tsx           # YouTube transcript testing
 │   │   └── lib/
 │   │       ├── apollo-client.ts          # GraphQL client
 │   │       └── graphql/mutations.ts      # GraphQL mutations
@@ -138,11 +135,6 @@ curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
 curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
   -H "Content-Type: application/json" \
   -d '{"query":"query { aiUsageDashboard { totalRequestsToday totalRemaining models { modelName currentUsage dailyLimit remaining percentageUsed } } }"}'
-
-# Test YouTube transcript fetching
-curl -X POST "https://backend.chandlerhardy.com/crooked-finger/graphql" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"mutation { fetchYoutubeTranscript(videoUrl: \"dQw4w9WgXcQ\") { success videoId wordCount language error transcript } }"}'
 
 # View backend logs
 cd crooked-finger && docker-compose -f docker-compose.backend.yml logs backend
@@ -237,16 +229,6 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - Identical implementation in Projects and Pattern Library
 - React Hooks for state management
 
-## 📺 YouTube Transcript Extraction
-**Extract patterns from crochet/knitting tutorial videos** ✅ **OPERATIONAL**
-
-### Features
-- Fetch transcripts via RapidAPI (100 requests/month free tier)
-- Support for auto-generated and manual captions
-- Automatic thumbnail fetching (maxresdefault + hqdefault fallback)
-- Multiple URL formats: youtube.com/watch?v=, youtu.be/, video IDs
-- Patterns save to library with thumbnails and full metadata
-
 ## 📊 Key Differences from CryptAssist
 1. **Port**: 8001 instead of 8000
 2. **Endpoint**: `/crooked-finger/graphql` instead of `/cryptassist/graphql`
@@ -260,7 +242,6 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - ✅ PostgreSQL database with crochet schema
 - ✅ Multi-model Gemini AI integration
 - ✅ Professional matplotlib diagram generation
-- ✅ YouTube transcript extraction
 - ✅ Pattern library with image management
 - ✅ Professional image viewer with zoom/pan
 - ✅ Deployed to OCI with port 8001
@@ -298,13 +279,12 @@ docker-compose -f docker-compose.backend.yml --env-file .env up -d
 - GraphQL backend integration, Error handling, Empty states
 
 ### Platform-Specific Features
-**Web Only**: YouTube extraction UI, Diagram generation, Zoom/pan image viewer, AI usage dashboard
+**Web Only**: Diagram generation, Zoom/pan image viewer, AI usage dashboard
 **iOS Only**: Pull-to-refresh, Camera integration, Biometric auth (Face ID/Touch ID)
 
 ## 🚧 Remaining Tasks
-1. **YouTube Integration on iOS**: Add video transcript extraction UI
-2. **Image Viewer on iOS**: Professional zoom/pan like web
-3. **AI Usage Dashboard on iOS**: Port token usage tracking from web
+1. **Image Viewer on iOS**: Professional zoom/pan like web
+2. **AI Usage Dashboard on iOS**: Port token usage tracking from web
 4. **Pattern Sharing**: Enable pattern sharing between users (both platforms)
 5. **Advanced Diagram Types**: Beyond granny squares (amigurumi, garments, knitting charts)
 
@@ -351,7 +331,6 @@ Both projects share the same nginx server with different paths:
 - **October 2025**: Knitting expertise added to all AI system prompts alongside crochet
 - **October 2025**: Web app reached feature parity with iOS (authentication, conversations, multimodal AI, model selection)
 - **October 2025**: OpenRouter integration for unlimited free AI requests (Qwen, DeepSeek models)
-- **October 2025**: RapidAPI YouTube service for transcript extraction (bypasses IP blocking)
 - **October 2025**: PDF support with inline rendering and caching
 - **October 2025**: AI model configuration syncs with backend for proper routing
 

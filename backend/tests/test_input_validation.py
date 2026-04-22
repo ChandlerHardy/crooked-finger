@@ -15,8 +15,6 @@ from app.schemas.mutations import (
     MAX_PATTERN_TEXT_LENGTH,
     MAX_SHORT_STRING_LENGTH,
     MAX_IMAGE_DATA_LENGTH,
-    MAX_TRANSCRIPT_LENGTH,
-    MAX_URL_LENGTH,
 )
 
 
@@ -77,12 +75,6 @@ class TestLengthConstants:
 
     def test_image_data_limit(self):
         assert MAX_IMAGE_DATA_LENGTH == 10_000_000
-
-    def test_transcript_limit(self):
-        assert MAX_TRANSCRIPT_LENGTH == 500_000
-
-    def test_url_limit(self):
-        assert MAX_URL_LENGTH == 2_048
 
 
 # ---------------------------------------------------------------------------
@@ -149,14 +141,6 @@ class TestValidationCoverage:
 
     def test_chat_validates_context(self):
         assert '_validate_length(context, MAX_CHAT_MESSAGE_LENGTH,' in self.source
-
-    # -- youtube / transcript -------------------------------------------------
-
-    def test_youtube_validates_url(self):
-        assert '_validate_length(video_url, MAX_URL_LENGTH,' in self.source
-
-    def test_transcript_validates_transcript(self):
-        assert '_validate_length(transcript, MAX_TRANSCRIPT_LENGTH,' in self.source
 
     # -- conversations --------------------------------------------------------
 

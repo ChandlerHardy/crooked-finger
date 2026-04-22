@@ -340,7 +340,7 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
-  const categories = ['all', 'motifs', 'borders', 'stitches', 'edgings', 'flowers', 'youtube-import'];
+  const categories = ['all', 'motifs', 'borders', 'stitches', 'edgings', 'flowers'];
   const difficulties = ['all', 'beginner', 'intermediate', 'advanced'];
 
   // Use only saved patterns from backend (no mock data)
@@ -1019,7 +1019,6 @@ export function PatternLibrary({ savedPatterns = [], onSavePattern, onDeletePatt
                   <option value="stitches">Stitches</option>
                   <option value="edgings">Edgings</option>
                   <option value="flowers">Flowers</option>
-                  <option value="youtube-import">YouTube Import</option>
                 </select>
               </div>
             </div>
