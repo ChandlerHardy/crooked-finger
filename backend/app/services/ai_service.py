@@ -195,7 +195,7 @@ class AIService:
         """Translate crochet/knitting notation into readable instructions."""
         client = self._get_client()
         if client is None:
-            return _fallback_translation(pattern_text)
+            return "AI service not configured. Please set ZAI_API_KEY."
 
         user_prompt = (
             "Please translate this crochet or knitting pattern into clear, "
@@ -371,38 +371,6 @@ def _extract_text(response: Any) -> str:
             if text:
                 parts.append(text)
     return "".join(parts)
-
-
-def _fallback_translation(pattern_text: str) -> str:
-    """Basic abbreviation expansion used when ZAI_API_KEY is missing."""
-    abbreviations = {
-        "sc": "single crochet",
-        "dc": "double crochet",
-        "hdc": "half double crochet",
-        "tc": "treble crochet",
-        "sl st": "slip stitch",
-        "ch": "chain",
-        "st": "stitch",
-        "sts": "stitches",
-        "inc": "increase",
-        "dec": "decrease",
-        "yo": "yarn over",
-        "sk": "skip",
-        "rep": "repeat",
-        "rnd": "round",
-        "beg": "beginning",
-        "sp": "space",
-        "tog": "together",
-    }
-    translated = pattern_text
-    for abbrev, full_form in abbreviations.items():
-        translated = translated.replace(abbrev, full_form)
-    return (
-        "Basic translation (AI not available):\n\n"
-        f"{translated}\n\n"
-        "Note: This is a simple translation. For detailed instructions, "
-        "please configure ZAI_API_KEY."
-    )
 
 
 # Global instance (maintained so existing imports keep working).

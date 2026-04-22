@@ -56,15 +56,11 @@ class TestTranslate:
         )
 
     @pytest.mark.asyncio
-    async def test_falls_back_when_no_api_key(self, monkeypatch):
+    async def test_returns_config_error_when_no_api_key(self, monkeypatch):
         svc = AIService()
         monkeypatch.setattr(svc, "_get_client", lambda: None)
-        # Use a pattern that avoids the known `ch` -> `chain` substring collision.
         result = await svc.translate_crochet_pattern("yo, sl st to close")
-        assert "Basic translation" in result
-        assert "yarn over" in result
-        assert "slip stitch" in result
-        # And make sure it tells the user what to configure
+        assert "not configured" in result
         assert "ZAI_API_KEY" in result
 
 
