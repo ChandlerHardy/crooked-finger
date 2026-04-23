@@ -12,6 +12,7 @@ from app.schemas.types import (
 from app.utils.auth import (
     get_password_hash, authenticate_user, create_access_token
 )
+from app.utils.rate_limit import check_chat_rate_limit, RateLimitExceeded
 from app.core.config import settings
 from app.services.ai_service import ai_service
 from app.services.pattern_service import pattern_service
@@ -412,10 +413,15 @@ class Mutation:
     @strawberry.field
     async def chat_with_assistant(
         self,
+        info: Info,
         message: str,
         context: Optional[str] = None
     ) -> str:
         """Chat with AI assistant about crochet and knitting patterns and techniques"""
+        try:
+            check_chat_rate_limit(info)
+        except RateLimitExceeded as exc:
+            return str(exc)
         _validate_length(message, MAX_CHAT_MESSAGE_LENGTH, "message")
         _validate_length(context, MAX_CHAT_MESSAGE_LENGTH, "context")
         db = next(get_db())
@@ -463,6 +469,13 @@ class Mutation:
             context: Optional context string (e.g., project details for project-specific chat)
             image_data: Optional JSON array of base64-encoded images
         """
+        try:
+            check_chat_rate_limit(info)
+        except RateLimitExceeded as exc:
+            return ChatResponse(
+                message=str(exc),
+                has_pattern=False,
+            )
         _validate_length(message, MAX_CHAT_MESSAGE_LENGTH, "message")
         _validate_length(context, MAX_CHAT_MESSAGE_LENGTH, "context")
         _validate_length(image_data, MAX_IMAGE_DATA_LENGTH, "image_data")
