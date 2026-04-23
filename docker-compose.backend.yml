@@ -18,7 +18,7 @@ services:
     networks:
       - crooked-finger-network
     ports:
-      - "5433:5432"  # Different external port from CryptAssist
+      - "5435:5432"  # Externally exposed on 5435 (5433 = gnomestead-ios on shared OCI host)
 
   backend:
     build:
